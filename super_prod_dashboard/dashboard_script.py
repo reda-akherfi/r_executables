@@ -63,48 +63,52 @@ avg_by_weekday = daily.groupby('weekday')['timeSpent'].mean().reindex(weekday_or
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
 st.title("Super Productivity Dashboard")
 
-st.header("Tasks Completed Over Time")
-fig1 = px.bar(
-    tasks_per_day.sort_values('done_date'),
-    x='done_date',
-    y='tasks_completed',
-    template='plotly_dark',
-    labels={'done_date': 'Date', 'tasks_completed': 'Tasks Completed'},
-    category_orders={'done_date': list(tasks_per_day['done_date'].astype(str))}
-)
-st.plotly_chart(fig1, use_container_width=True)
+col1, col2 = st.columns(2)
+with col1:
+    st.header("Tasks Completed Over Time")
+    fig1 = px.bar(
+        tasks_per_day.sort_values('done_date'),
+        x='done_date',
+        y='tasks_completed',
+        template='plotly_dark',
+        labels={'done_date': 'Date', 'tasks_completed': 'Tasks Completed'},
+        category_orders={'done_date': list(tasks_per_day['done_date'].astype(str))}
+    )
+    st.plotly_chart(fig1, use_container_width=True)
+with col2:
+    st.header("Time Spent Per Project (minutes)")
+    fig2 = px.pie(
+        time_per_project.sort_values('title_project'),
+        names='title_project',
+        values='timeSpent',
+        template='plotly_dark',
+        labels={'title_project': 'Project', 'timeSpent': 'Time Spent (min)'}
+    )
+    st.plotly_chart(fig2, use_container_width=True)
 
-st.header("Time Spent Per Project (minutes)")
-fig2 = px.pie(
-    time_per_project.sort_values('title_project'),
-    names='title_project',
-    values='timeSpent',
-    template='plotly_dark',
-    labels={'title_project': 'Project', 'timeSpent': 'Time Spent (min)'}
-)
-st.plotly_chart(fig2, use_container_width=True)
-
-st.header("Time Spent Per Day Per Project (Stacked)")
-fig3 = px.bar(
-    grouped,
-    x='done_date',
-    y='timeSpent',
-    color='title_project',
-    template='plotly_dark',
-    labels={'timeSpent': 'Time Spent (min)', 'done_date': 'Date', 'title_project': 'Project'},
-    title='Time Spent Per Day Per Project (Stacked)',
-    category_orders={'done_date': date_order}
-)
-st.plotly_chart(fig3, use_container_width=True)
-
-st.header("Average Time Spent Per Workday")
-fig4 = px.bar(
-    avg_by_weekday,
-    x='weekday',
-    y='timeSpent',
-    template='plotly_dark',
-    labels={'timeSpent': 'Average Time Spent (min)', 'weekday': 'Day of Week'},
-    title='Average Time Spent Per Workday',
-    category_orders={'weekday': weekday_order}
-)
-st.plotly_chart(fig4, use_container_width=True)
+col3, col4 = st.columns(2)
+with col3:
+    st.header("Time Spent Per Day Per Project (Stacked)")
+    fig3 = px.bar(
+        grouped,
+        x='done_date',
+        y='timeSpent',
+        color='title_project',
+        template='plotly_dark',
+        labels={'timeSpent': 'Time Spent (min)', 'done_date': 'Date', 'title_project': 'Project'},
+        title='Time Spent Per Day Per Project (Stacked)',
+        category_orders={'done_date': date_order}
+    )
+    st.plotly_chart(fig3, use_container_width=True)
+with col4:
+    st.header("Average Time Spent Per Workday")
+    fig4 = px.bar(
+        avg_by_weekday,
+        x='weekday',
+        y='timeSpent',
+        template='plotly_dark',
+        labels={'timeSpent': 'Average Time Spent (min)', 'weekday': 'Day of Week'},
+        title='Average Time Spent Per Workday',
+        category_orders={'weekday': weekday_order}
+    )
+    st.plotly_chart(fig4, use_container_width=True)
