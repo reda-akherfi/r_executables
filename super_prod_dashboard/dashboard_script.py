@@ -210,7 +210,6 @@ cumulative_fig.update_layout(
 
 # --- Streamlit App ---
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
-st.title("Super Productivity Dashboard")
 
 st.markdown("""
     <style>
