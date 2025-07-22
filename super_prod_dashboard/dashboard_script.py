@@ -3,6 +3,11 @@ import pandas as pd
 from datetime import datetime
 import plotly.express as px
 from dash import Dash, dcc, html
+import dash_bootstrap_components as dbc
+import plotly.io as pio
+
+# Set Plotly template to "plotly_dark"
+pio.templates.default = "plotly_dark"
 
 # Load JSON data
 with open('super-productivity-backup.json', 'r', encoding='utf-8') as f:
@@ -46,16 +51,31 @@ tasks_per_day = df_done.groupby('done_date').size().reset_index(name='tasks_comp
 time_per_project = df_tasks.groupby('title_project')['timeSpent'].sum().reset_index()
 
 # --- Dash App ---
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
-app.layout = html.Div([
-    html.H1("Super Productivity Dashboard"),
-    html.H2("Tasks Completed Over Time"),
-    dcc.Graph(figure=px.bar(tasks_per_day, x='done_date', y='tasks_completed')),
-    html.H2("Time Spent Per Project (minutes)"),
-    dcc.Graph(figure=px.pie(time_per_project, names='title_project', values='timeSpent')),
-    # Add more graphs here!
-])
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col(html.H1("Super Productivity Dashboard", className="text-center mb-4"))
+    ]),
+    dbc.Row([
+        dbc.Col([
+            html.H2("Tasks Completed Over Time"),
+            dcc.Graph(
+                figure=px.bar(tasks_per_day, x='done_date', y='tasks_completed'),
+                style={'height': '400px'}
+            )
+        ])
+    ], className="mb-4"),
+    dbc.Row([
+        dbc.Col([
+            html.H2("Time Spent Per Project (minutes)"),
+            dcc.Graph(
+                figure=px.pie(time_per_project, names='title_project', values='timeSpent'),
+                style={'height': '400px'}
+            )
+        ])
+    ])
+], style={'padding': '2rem'})
 
 if __name__ == '__main__':
     app.run(debug=True)
