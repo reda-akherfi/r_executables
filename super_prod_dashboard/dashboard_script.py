@@ -70,6 +70,117 @@ if 'timeSpent' in df_done.columns:
 else:
     cumulative_df['cumulative_minutes'] = cumulative_df['tasks_completed'].cumsum()
 
+# Create all figures before layout
+fig1 = px.bar(
+    tasks_per_day.sort_values('done_date'),
+    x='done_date',
+    y='tasks_completed',
+    template='plotly_dark',
+    labels={'done_date': 'Date', 'tasks_completed': 'Tasks Completed'},
+    category_orders={'done_date': list(tasks_per_day['done_date'].astype(str))},
+    title='Tasks Completed Over Time'
+)
+fig1.update_layout(
+    plot_bgcolor='#222',
+    paper_bgcolor='#222',
+    margin=dict(l=20, r=20, t=40, b=20),
+    font_color='#fff',
+    xaxis=dict(showgrid=False, zeroline=False),
+    yaxis=dict(showgrid=False, zeroline=False),
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#444", width=3),
+            fillcolor="rgba(0,0,0,0)",
+            layer="below"
+        )
+    ]
+)
+
+fig2 = px.pie(
+    time_per_project.sort_values('title_project'),
+    names='title_project',
+    values='timeSpent',
+    template='plotly_dark',
+    labels={'title_project': 'Project', 'timeSpent': 'Time Spent (min)'},
+    title='Time Spent Per Project (minutes)'
+)
+fig2.update_layout(
+    plot_bgcolor='#222',
+    paper_bgcolor='#222',
+    margin=dict(l=20, r=20, t=40, b=20),
+    font_color='#fff',
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#444", width=3),
+            fillcolor="rgba(0,0,0,0)",
+            layer="below"
+        )
+    ]
+)
+
+fig3 = px.bar(
+    grouped,
+    x='done_date',
+    y='timeSpent',
+    color='title_project',
+    template='plotly_dark',
+    labels={'timeSpent': 'Time Spent (min)', 'done_date': 'Date', 'title_project': 'Project'},
+    title='Time Spent Per Day Per Project (Stacked)',
+    category_orders={'done_date': date_order}
+)
+fig3.update_layout(
+    plot_bgcolor='#222',
+    paper_bgcolor='#222',
+    margin=dict(l=20, r=20, t=40, b=20),
+    font_color='#fff',
+    xaxis=dict(showgrid=False, zeroline=False),
+    yaxis=dict(showgrid=False, zeroline=False),
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#444", width=3),
+            fillcolor="rgba(0,0,0,0)",
+            layer="below"
+        )
+    ]
+)
+
+fig4 = px.bar(
+    avg_by_weekday,
+    x='weekday',
+    y='timeSpent',
+    template='plotly_dark',
+    labels={'timeSpent': 'Average Time Spent (min)', 'weekday': 'Day of Week'},
+    title='Average Time Spent Per Workday',
+    category_orders={'weekday': weekday_order}
+)
+fig4.update_layout(
+    plot_bgcolor='#222',
+    paper_bgcolor='#222',
+    margin=dict(l=20, r=20, t=40, b=20),
+    font_color='#fff',
+    xaxis=dict(showgrid=False, zeroline=False),
+    yaxis=dict(showgrid=False, zeroline=False),
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#444", width=3),
+            fillcolor="rgba(0,0,0,0)",
+            layer="below"
+        )
+    ]
+)
+
 cumulative_fig = px.bar(
     cumulative_df,
     x='done_date',
@@ -78,61 +189,66 @@ cumulative_fig = px.bar(
     labels={'done_date': 'Date', 'cumulative_minutes': 'Cumulative Minutes Worked'},
     title='Accumulated Work Time Across Days (Minutes)'
 )
+cumulative_fig.update_layout(
+    plot_bgcolor='#222',
+    paper_bgcolor='#222',
+    margin=dict(l=20, r=20, t=40, b=20),
+    font_color='#fff',
+    xaxis=dict(showgrid=False, zeroline=False),
+    yaxis=dict(showgrid=False, zeroline=False),
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#444", width=3),
+            fillcolor="rgba(0,0,0,0)",
+            layer="below"
+        )
+    ]
+)
 
 # --- Streamlit App ---
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
 st.title("Super Productivity Dashboard")
 
+st.markdown("""
+    <style>
+    .plot-box {
+        border: 2px solid #444;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        background: #222;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Helper function for bordered plot containers
+def bordered_plot(header, fig):
+    # Open a container so both header and plot are grouped
+    with st.container():
+        # Open the styled div
+        st.markdown(
+            "<div class='plot-box'>",
+            unsafe_allow_html=True
+        )
+        # Render header and plot inside the div
+        st.markdown(f"<h3 style='color:#fff'>{header}</h3>", unsafe_allow_html=True)
+        st.plotly_chart(fig, use_container_width=True)
+        # Close the div
+        st.markdown("</div>", unsafe_allow_html=True)
+
 col1, col2 = st.columns(2)
 with col1:
-    st.header("Tasks Completed Over Time")
-    fig1 = px.bar(
-        tasks_per_day.sort_values('done_date'),
-        x='done_date',
-        y='tasks_completed',
-        template='plotly_dark',
-        labels={'done_date': 'Date', 'tasks_completed': 'Tasks Completed'},
-        category_orders={'done_date': list(tasks_per_day['done_date'].astype(str))}
-    )
     st.plotly_chart(fig1, use_container_width=True)
 with col2:
-    st.header("Time Spent Per Project (minutes)")
-    fig2 = px.pie(
-        time_per_project.sort_values('title_project'),
-        names='title_project',
-        values='timeSpent',
-        template='plotly_dark',
-        labels={'title_project': 'Project', 'timeSpent': 'Time Spent (min)'}
-    )
     st.plotly_chart(fig2, use_container_width=True)
 
 col3, col4 = st.columns(2)
 with col3:
-    st.header("Time Spent Per Day Per Project (Stacked)")
-    fig3 = px.bar(
-        grouped,
-        x='done_date',
-        y='timeSpent',
-        color='title_project',
-        template='plotly_dark',
-        labels={'timeSpent': 'Time Spent (min)', 'done_date': 'Date', 'title_project': 'Project'},
-        title='Time Spent Per Day Per Project (Stacked)',
-        category_orders={'done_date': date_order}
-    )
     st.plotly_chart(fig3, use_container_width=True)
 with col4:
-    st.header("Average Time Spent Per Workday")
-    fig4 = px.bar(
-        avg_by_weekday,
-        x='weekday',
-        y='timeSpent',
-        template='plotly_dark',
-        labels={'timeSpent': 'Average Time Spent (min)', 'weekday': 'Day of Week'},
-        title='Average Time Spent Per Workday',
-        category_orders={'weekday': weekday_order}
-    )
     st.plotly_chart(fig4, use_container_width=True)
 
-# New row for cumulative plot
-st.header("Accumulated Work Time Across Days (Minutes)")
 st.plotly_chart(cumulative_fig, use_container_width=True)
