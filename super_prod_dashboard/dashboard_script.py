@@ -59,6 +59,26 @@ daily = df_avg.groupby(['done_date', 'weekday'])['timeSpent'].sum().reset_index(
 weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 avg_by_weekday = daily.groupby('weekday')['timeSpent'].mean().reindex(weekday_order).reset_index()
 
+# --- Cumulative Work Time Plot ---
+cumulative_df = tasks_per_day.sort_values('done_date').copy()
+cumulative_df['cumulative_minutes'] = cumulative_df['tasks_completed'].copy()
+if 'timeSpent' in df_done.columns:
+    # If you want cumulative time spent, not just tasks completed
+    time_per_day = df_done.groupby('done_date')['timeSpent'].sum().reset_index()
+    cumulative_df = time_per_day.sort_values('done_date').copy()
+    cumulative_df['cumulative_minutes'] = cumulative_df['timeSpent'].cumsum()
+else:
+    cumulative_df['cumulative_minutes'] = cumulative_df['tasks_completed'].cumsum()
+
+cumulative_fig = px.bar(
+    cumulative_df,
+    x='done_date',
+    y='cumulative_minutes',
+    template='plotly_dark',
+    labels={'done_date': 'Date', 'cumulative_minutes': 'Cumulative Minutes Worked'},
+    title='Accumulated Work Time Across Days (Minutes)'
+)
+
 # --- Streamlit App ---
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
 st.title("Super Productivity Dashboard")
@@ -112,3 +132,7 @@ with col4:
         category_orders={'weekday': weekday_order}
     )
     st.plotly_chart(fig4, use_container_width=True)
+
+# New row for cumulative plot
+st.header("Accumulated Work Time Across Days (Minutes)")
+st.plotly_chart(cumulative_fig, use_container_width=True)
