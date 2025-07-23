@@ -227,8 +227,11 @@ media_counter = simple_counters['a53564Qzc3w2LHXE6c-1_']
 media_data = media_counter.get('countOnDay', {})
 media_dates = list(media_data.keys())
 media_hours = [v / 1000 / 60 / 60 for v in media_data.values()]
-df_media = pd.DataFrame({'date': pd.to_datetime(media_dates), 'hours': media_hours})
-fig_media = go.Figure(data=[go.Bar(x=df_media['date'], y=df_media['hours'], marker_color='#e377c2')])
+bar_colors_media = ['#2ca02c' if v < 4 else '#d62728' for v in media_hours]  # green if <4h, else red
+
+df_media = pd.DataFrame({'date': pd.to_datetime(media_dates), 'hours': media_hours, 'color': bar_colors_media})
+fig_media = go.Figure(data=[go.Bar(x=df_media['date'], y=df_media['hours'], marker_color=df_media['color'])])
+fig_media.add_hline(y=4, line_dash='dash', line_color='#888', annotation_text='4h Limit', annotation_position='top left')
 fig_media.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
