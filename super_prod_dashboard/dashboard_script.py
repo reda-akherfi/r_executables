@@ -110,35 +110,21 @@ fig1.update_layout(
     ]
 )
 fig1.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
     margin=dict(l=20, r=20, t=120, b=20),
     title={'text': 'Tasks Completed Over Time', 'x': 0.5, 'xanchor': 'center'}
 )
 
-fig2 = px.pie(
-    time_per_project.sort_values('title'),
-    names='title',
-    values='timeSpent',
-    template='plotly_dark',
-    labels={'title': 'Project', 'timeSpent': 'Time Spent (min)'},
-    title='Time Spent Per Project (minutes)'
-)
+fig2 = go.Figure(data=[go.Pie(
+    labels=time_per_project['title'],
+    values=time_per_project['timeSpent'],
+    hole=0
+)])
 fig2.update_layout(
-    plot_bgcolor='#222',
-    paper_bgcolor='#222',
-    margin=dict(l=20, r=20, t=40, b=20),
-    font_color='#fff',
-    shapes=[
-        dict(
-            type="rect",
-            xref="paper", yref="paper",
-            x0=0, y0=0, x1=1, y1=1,
-            line=dict(color="#444", width=3),
-            fillcolor="rgba(0,0,0,0)",
-            layer="below"
-        )
-    ]
-)
-fig2.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
+    height=400,
     margin=dict(l=20, r=20, t=120, b=20),
     title={'text': 'Time Spent Per Project (minutes)', 'x': 0.5, 'xanchor': 'center'}
 )
@@ -172,6 +158,8 @@ fig3.update_layout(
     ]
 )
 fig3.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
     margin=dict(l=20, r=20, t=120, b=20),
     title={'text': 'Time Spent/day/project', 'x': 0.5, 'xanchor': 'center'}
 )
@@ -204,6 +192,8 @@ fig4.update_layout(
     ]
 )
 fig4.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
     margin=dict(l=20, r=20, t=120, b=20),
     title={'text': 'Average Time Spent Per Workday', 'x': 0.5, 'xanchor': 'center'}
 )
@@ -235,6 +225,8 @@ cumulative_fig.update_layout(
     ]
 )
 cumulative_fig.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
     margin=dict(l=20, r=20, t=120, b=20),
     title={'text': 'Accumulated Work Time Across Days (Minutes)', 'x': 0.5, 'xanchor': 'center'}
 )
@@ -283,6 +275,8 @@ for label in pie_labels:
 
 fig_tags = go.Figure(data=[go.Pie(labels=pie_labels, values=pie_values, marker=dict(colors=pie_colors), hole=0)])
 fig_tags.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
     height=400,
     margin=dict(l=20, r=20, t=120, b=20),
     title={'text': 'Time Spent Distribution by Tag', 'x': 0.5, 'xanchor': 'center'}
