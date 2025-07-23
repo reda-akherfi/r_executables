@@ -201,6 +201,61 @@ fig_tags.update_layout(
     title={'text': 'Time Spent Distribution by Tag', 'x': 0.5, 'xanchor': 'center'}
 )
 
+# --- Simple Counter Visualizations ---
+simple_counters = data['simpleCounter']['entities']
+
+# Water Intake Tracker
+water_counter = simple_counters['wQuxogx-iByRYzzw9_LdZ']
+water_data = water_counter.get('countOnDay', {})
+water_dates = list(water_data.keys())
+water_liters = [v * 0.75 for v in water_data.values()]
+df_water = pd.DataFrame({'date': pd.to_datetime(water_dates), 'liters': water_liters})
+fig_water = go.Figure(data=[go.Bar(x=df_water['date'], y=df_water['liters'], marker_color='#1f77b4')])
+fig_water.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
+    height=400,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Daily Water Intake (L)', 'x': 0.5, 'xanchor': 'center'}
+)
+
+# Media Watching Tracker
+media_counter = simple_counters['a53564Qzc3w2LHXE6c-1_']
+media_data = media_counter.get('countOnDay', {})
+media_dates = list(media_data.keys())
+media_hours = [v / 1000 / 60 / 60 for v in media_data.values()]
+df_media = pd.DataFrame({'date': pd.to_datetime(media_dates), 'hours': media_hours})
+fig_media = go.Figure(data=[go.Bar(x=df_media['date'], y=df_media['hours'], marker_color='#e377c2')])
+fig_media.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
+    height=400,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Daily Media Watching (Hours)', 'x': 0.5, 'xanchor': 'center'}
+)
+
+# Workout Tracker
+workout_counter = simple_counters['dD4T3Ulg16FpTqlkwTtpq']
+workout_data = workout_counter.get('countOnDay', {})
+workout_dates = list(workout_data.keys())
+workout_hours = [v / 1000 / 60 / 60 for v in workout_data.values()]
+df_workout = pd.DataFrame({'date': pd.to_datetime(workout_dates), 'hours': workout_hours})
+fig_workout = go.Figure(data=[go.Bar(x=df_workout['date'], y=df_workout['hours'], marker_color='#2ca02c')])
+fig_workout.update_layout(
+    plot_bgcolor='#000',
+    paper_bgcolor='#000',
+    height=400,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Daily Workout Time (Hours)', 'x': 0.5, 'xanchor': 'center'}
+)
+
+extra_plot_keys = ['water', 'media', 'workout']
+extra_plot_objs = {
+    'water': fig_water,
+    'media': fig_media,
+    'workout': fig_workout,
+}
+
 # --- Streamlit App ---
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
 
@@ -260,7 +315,7 @@ st.markdown("""
 
 # --- Paginated Dashboard: Page 1 = calendar, Pages 2+ = 1x2 grid of plots ---
 # List all plots in the desired order: accumulated, fig3, fig4, fig1, fig2, tags_pie
-plot_keys = ['accumulated', 'fig3', 'fig4', 'fig1', 'fig2', 'tags_pie']
+plot_keys = ['accumulated', 'fig3', 'fig4', 'fig1', 'fig2', 'tags_pie'] + extra_plot_keys
 plot_objs = {
     'accumulated': cumulative_fig,
     'fig3': fig3,
@@ -268,6 +323,7 @@ plot_objs = {
     'fig1': fig1,
     'fig2': fig2,
     'tags_pie': fig_tags,
+    **extra_plot_objs
 }
 
 plots_per_page = 2  # 1x2 grid for pages 2+
