@@ -6,6 +6,8 @@ import plotly.express as px
 # Add import for streamlit-calendar
 from streamlit_calendar import calendar
 import math
+import plotly.graph_objects as go
+import numpy as np
 
 # --- Load JSON data ---
 with open('super-productivity-backup.json', 'r', encoding='utf-8') as f:
@@ -25,6 +27,7 @@ for task_id, task in data['task']['entities'].items():
         'doneOn': datetime.fromtimestamp(task['doneOn'] / 1000) if task.get('doneOn') else None,
         'projectId': task['projectId'],
         'notes': task.get('notes', ''),
+        'tagIds': task.get('tagIds', []),  # <-- ADD THIS LINE
     })
 df_tasks = pd.DataFrame(tasks)
 
@@ -211,6 +214,55 @@ cumulative_fig.update_layout(
     ]
 )
 
+# --- Create Pie Plot for Tag Distribution ---
+# Calculate total time spent per tag, and for untagged work
+
+df_tags = df_tasks[df_tasks['timeSpent'] > 0].copy()  # Only tasks with time spent
+if 'tagIds' not in df_tags.columns:
+    df_tags['tagIds'] = [[] for _ in range(len(df_tags))]
+# If tagIds is not a list, convert to list
+if not isinstance(df_tags['tagIds'].iloc[0], list):
+    df_tags['tagIds'] = df_tags['tagIds'].apply(lambda x: [x] if pd.notnull(x) else [])
+
+# Mark untagged rows
+df_tags['has_tag'] = df_tags['tagIds'].apply(lambda x: bool(x) and any(x))
+
+# Time spent for tagged tasks
+df_tagged = df_tags[df_tags['has_tag']].explode('tagIds')
+tag_time = df_tagged.groupby('tagIds')['timeSpent'].sum().reset_index()
+tag_time = tag_time[tag_time['tagIds'].notnull() & (tag_time['tagIds'] != '')]
+# Map tagIds to tag names if available
+if 'tag' in data and 'entities' in data['tag']:
+    tag_map = {k: v['title'] for k, v in data['tag']['entities'].items()}
+    tag_time['tag'] = tag_time['tagIds'].map(tag_map)
+else:
+    tag_time['tag'] = tag_time['tagIds']
+
+# Time spent for untagged tasks
+untagged_time = df_tags[~df_tags['has_tag']]['timeSpent'].sum()
+
+# Combine
+pie_labels = list(tag_time['tag']) if not tag_time.empty else []
+pie_values = list(tag_time['timeSpent']) if not tag_time.empty else []
+if untagged_time > 0 or not pie_labels:
+    pie_labels.append('Untagged')
+    pie_values.append(untagged_time)
+
+# Set colors: grey for untagged, default for others
+pie_colors = []
+for label in pie_labels:
+    if label == 'Untagged':
+        pie_colors.append('grey')
+    else:
+        pie_colors.append(None)
+
+fig_tags = go.Figure(data=[go.Pie(labels=pie_labels, values=pie_values, marker=dict(colors=pie_colors), hole=0)])
+fig_tags.update_layout(
+    height=400,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Time Spent Distribution by Tag', 'x': 0.5, 'xanchor': 'center'}
+)
+
 # --- Streamlit App ---
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
 
@@ -283,46 +335,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Remove Plot Height Slider ---
-# (No slider in sidebar, set fixed height for plots)
-fixed_plot_height = 400
-
-# Set height for all plotly figures for a tighter grid, add more top margin, and truly center titles
-fig1.update_layout(
-    height=fixed_plot_height,
-    margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Tasks Completed Over Time', 'x': 0.5, 'xanchor': 'center'}
-)
-fig2.update_layout(
-    height=fixed_plot_height,
-    margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Time Spent Per Project (minutes)', 'x': 0.5, 'xanchor': 'center'}
-)
-fig3.update_layout(
-    height=fixed_plot_height,
-    margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Time Spent/day/project', 'x': 0.5, 'xanchor': 'center'}
-)
-fig4.update_layout(
-    height=fixed_plot_height,
-    margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Average Time Spent Per Workday', 'x': 0.5, 'xanchor': 'center'}
-)
-cumulative_fig.update_layout(
-    height=fixed_plot_height,
-    margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Accumulated Work Time Across Days (Minutes)', 'x': 0.5, 'xanchor': 'center'}
-)
-
 # --- Paginated Dashboard: Page 1 = calendar, Pages 2+ = 1x2 grid of plots ---
-# List all plots in the desired order: accumulated, fig3, fig4, fig1, fig2
-plot_keys = ['accumulated', 'fig3', 'fig4', 'fig1', 'fig2']
+# List all plots in the desired order: accumulated, fig3, fig4, fig1, fig2, tags_pie
+plot_keys = ['accumulated', 'fig3', 'fig4', 'fig1', 'fig2', 'tags_pie']
 plot_objs = {
     'accumulated': cumulative_fig,
     'fig3': fig3,
     'fig4': fig4,
     'fig1': fig1,
     'fig2': fig2,
+    'tags_pie': fig_tags,
 }
 
 plots_per_page = 2  # 1x2 grid for pages 2+
