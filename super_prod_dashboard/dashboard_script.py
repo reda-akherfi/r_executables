@@ -3,6 +3,8 @@ import pandas as pd
 import json
 from datetime import datetime
 import plotly.express as px
+# Add import for streamlit-calendar
+from streamlit_calendar import calendar
 
 # --- Load JSON data ---
 with open('super-productivity-backup.json', 'r', encoding='utf-8') as f:
@@ -211,6 +213,45 @@ cumulative_fig.update_layout(
 # --- Streamlit App ---
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
 
+# --- Interactive Calendar (streamlit-calendar) ---
+# Prepare events: one per day worked, with minutes worked as title
+calendar_events = []
+for idx, row in tasks_per_day.iterrows():
+    date_str = row['done_date'].strftime('%Y-%m-%d')
+    minutes = df_done[df_done['done_date'] == row['done_date']]['timeSpent'].sum()
+    # Use green dot emoji and minutes as title
+    event_title = f"🟢 {int(minutes)} min"
+    calendar_events.append({
+        "title": event_title,
+        "start": date_str,
+        "end": date_str,
+        "allDay": True,
+        "display": "block",
+    })
+
+calendar_options = {
+    "initialView": "dayGridMonth",
+    "headerToolbar": {
+        "left": "prev,next today",
+        "center": "title",
+        "right": "dayGridMonth,dayGridWeek,dayGridDay"
+    },
+    "height": 500,
+    "locale": "en",
+    "eventDisplay": "block",
+    "dayMaxEventRows": 2,
+    "fixedWeekCount": False,
+    "showNonCurrentDates": True,
+    "selectable": False,
+    "editable": False,
+}
+# Remove custom CSS for dot/minutes, keep only the rest if needed
+custom_css = """
+    .fc-daygrid-day-number {
+        color: #fff;
+    }
+"""
+
 st.markdown("""
     <style>
     .plot-box {
@@ -222,6 +263,15 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+# Render the calendar at the top
+st.markdown("### Work Calendar (Green dot = worked, number = minutes)")
+calendar(
+    events=calendar_events,
+    options=calendar_options,
+    custom_css=custom_css,
+    key="work-calendar"
+)
 
 # Helper function for bordered plot containers
 def bordered_plot(header, fig):
