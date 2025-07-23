@@ -8,6 +8,7 @@ from streamlit_calendar import calendar
 import math
 import plotly.graph_objects as go
 import numpy as np
+from collections import defaultdict
 
 # --- Load JSON data ---
 with open('super-productivity-backup.json', 'r', encoding='utf-8') as f:
@@ -43,82 +44,58 @@ df_projects = pd.DataFrame(projects)
 # --- Merge for richer info ---
 df_tasks = df_tasks.merge(df_projects, left_on='projectId', right_on='id', suffixes=('', '_project'))
 
-# --- Tasks Completed Over Time ---
-df_done = df_tasks[df_tasks['isDone'] & df_tasks['doneOn'].notnull()].copy()
-df_done['done_date'] = df_done['doneOn'].dt.date
-tasks_per_day = df_done.groupby('done_date').size().reset_index(name='tasks_completed')
+# --- Build a DataFrame of all time spent per day (all tasks, done or not) ---
+all_time_by_day = defaultdict(lambda: defaultdict(float))  # {date: {project: minutes}}
+for _, task in df_tasks.iterrows():
+    project = task['title_project']
+    if 'timeSpentOnDay' in data['task']['entities'][task['id']]:
+        for day, ms in data['task']['entities'][task['id']]['timeSpentOnDay'].items():
+            minutes = ms / 1000 / 60
+            all_time_by_day[day][project] += minutes
 
-# --- Time Spent Per Project ---
-time_per_project = df_tasks.groupby('title_project')['timeSpent'].sum().reset_index()
-# Ensure all projects are included, even those with 0 minutes
-time_per_project = df_projects[['title']].merge(
-    time_per_project, left_on='title', right_on='title_project', how='left'
-)
-time_per_project['timeSpent'] = time_per_project['timeSpent'].fillna(0)
+# Build a DataFrame: columns = ['date', 'project', 'minutes']
+rows = []
+for day, proj_dict in all_time_by_day.items():
+    for project, minutes in proj_dict.items():
+        rows.append({'date': pd.to_datetime(day), 'project': project, 'minutes': minutes})
+df_all_time = pd.DataFrame(rows)
 
-# --- Stacked Bar: Time Spent Per Day Per Project ---
-df_stacked = df_tasks[df_tasks['isDone'] & df_tasks['doneOn'].notnull()].copy()
-df_stacked['done_date'] = df_stacked['doneOn'].dt.date
-grouped = df_stacked.groupby(['done_date', 'title_project'])['timeSpent'].sum().reset_index()
-date_order = list(grouped['done_date'].astype(str).unique())
+# --- Calendar: show a green dot and minutes for every day with time spent ---
+calendar_events = []
+for day, group in df_all_time.groupby('date'):
+    total_minutes = group['minutes'].sum()
+    calendar_events.append({
+        "title": f"🟢 {int(total_minutes)} min",
+        "start": day.strftime('%Y-%m-%d'),
+        "end": day.strftime('%Y-%m-%d'),
+        "allDay": True,
+        "display": "block",
+    })
 
-# --- Average Time Per Workday ---
-df_avg = df_tasks[df_tasks['isDone'] & df_tasks['doneOn'].notnull()].copy()
-df_avg['done_date'] = df_avg['doneOn'].dt.date
-df_avg['weekday'] = df_avg['doneOn'].dt.day_name()
-daily = df_avg.groupby(['done_date', 'weekday'])['timeSpent'].sum().reset_index()
-weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-avg_by_weekday = daily.groupby('weekday')['timeSpent'].mean().reindex(weekday_order).reset_index()
+# --- Tasks Completed Over Time (now: All Time Spent Per Day) ---
+df_time_per_day = df_all_time.groupby('date')['minutes'].sum().reset_index()
 
-# --- Cumulative Work Time Plot ---
-cumulative_df = tasks_per_day.sort_values('done_date').copy()
-cumulative_df['cumulative_minutes'] = cumulative_df['tasks_completed'].copy()
-if 'timeSpent' in df_done.columns:
-    # If you want cumulative time spent, not just tasks completed
-    time_per_day = df_done.groupby('done_date')['timeSpent'].sum().reset_index()
-    cumulative_df = time_per_day.sort_values('done_date').copy()
-    cumulative_df['cumulative_minutes'] = cumulative_df['timeSpent'].cumsum()
-else:
-    cumulative_df['cumulative_minutes'] = cumulative_df['tasks_completed'].cumsum()
-
-# Create all figures before layout
-fig1 = px.bar(
-    tasks_per_day.sort_values('done_date'),
-    x='done_date',
-    y='tasks_completed',
-    template='plotly_dark',
-    labels={'done_date': 'Date', 'tasks_completed': 'Tasks Completed'},
-    category_orders={'done_date': list(tasks_per_day['done_date'].astype(str))},
-    title='Tasks Completed Over Time'
-)
-fig1.update_layout(
-    plot_bgcolor='#222',
-    paper_bgcolor='#222',
-    margin=dict(l=20, r=20, t=40, b=20),
-    font_color='#fff',
-    xaxis=dict(showgrid=False, zeroline=False),
-    yaxis=dict(showgrid=False, zeroline=False),
-    shapes=[
-        dict(
-            type="rect",
-            xref="paper", yref="paper",
-            x0=0, y0=0, x1=1, y1=1,
-            line=dict(color="#444", width=3),
-            fillcolor="rgba(0,0,0,0)",
-            layer="below"
-        )
-    ]
-)
+fig1 = go.Figure(data=[go.Bar(
+    x=df_time_per_day['date'],
+    y=df_time_per_day['minutes'],
+    marker_color='#636efa'
+)])
 fig1.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
     margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Tasks Completed Over Time', 'x': 0.5, 'xanchor': 'center'}
+    title={'text': 'All Time Spent Per Day (min)', 'x': 0.5, 'xanchor': 'center'}
 )
 
+# --- Time Spent Per Project ---
+time_per_project = df_all_time.groupby('project')['minutes'].sum().reset_index()
+time_per_project = df_projects[['title']].merge(
+    time_per_project, left_on='title', right_on='project', how='left'
+)
+time_per_project['minutes'] = time_per_project['minutes'].fillna(0)
 fig2 = go.Figure(data=[go.Pie(
     labels=time_per_project['title'],
-    values=time_per_project['timeSpent'],
+    values=time_per_project['minutes'],
     hole=0
 )])
 fig2.update_layout(
@@ -129,68 +106,28 @@ fig2.update_layout(
     title={'text': 'Time Spent Per Project (minutes)', 'x': 0.5, 'xanchor': 'center'}
 )
 
-fig3 = px.bar(
-    grouped,
-    x='done_date',
-    y='timeSpent',
-    color='title_project',
-    template='plotly_dark',
-    labels={'timeSpent': 'Time Spent (min)', 'done_date': 'Date', 'title_project': 'Project'},
-    title='Time Spent/day/project',
-    category_orders={'done_date': date_order}
-)
+# --- Stacked Bar: Time Spent Per Day Per Project ---
+fig3 = go.Figure()
+for project in df_all_time['project'].unique():
+    proj_data = df_all_time[df_all_time['project'] == project]
+    fig3.add_bar(x=proj_data['date'], y=proj_data['minutes'], name=project)
 fig3.update_layout(
-    plot_bgcolor='#222',
-    paper_bgcolor='#222',
-    margin=dict(l=20, r=20, t=40, b=20),
-    font_color='#fff',
-    xaxis=dict(showgrid=False, zeroline=False),
-    yaxis=dict(showgrid=False, zeroline=False),
-    shapes=[
-        dict(
-            type="rect",
-            xref="paper", yref="paper",
-            x0=0, y0=0, x1=1, y1=1,
-            line=dict(color="#444", width=3),
-            fillcolor="rgba(0,0,0,0)",
-            layer="below"
-        )
-    ]
-)
-fig3.update_layout(
+    barmode='stack',
     plot_bgcolor='#000',
     paper_bgcolor='#000',
     margin=dict(l=20, r=20, t=120, b=20),
     title={'text': 'Time Spent/day/project', 'x': 0.5, 'xanchor': 'center'}
 )
 
-fig4 = px.bar(
-    avg_by_weekday,
-    x='weekday',
-    y='timeSpent',
-    template='plotly_dark',
-    labels={'timeSpent': 'Average Time Spent (min)', 'weekday': 'Day of Week'},
-    title='Average Time Spent Per Workday',
-    category_orders={'weekday': weekday_order}
-)
-fig4.update_layout(
-    plot_bgcolor='#222',
-    paper_bgcolor='#222',
-    margin=dict(l=20, r=20, t=40, b=20),
-    font_color='#fff',
-    xaxis=dict(showgrid=False, zeroline=False),
-    yaxis=dict(showgrid=False, zeroline=False),
-    shapes=[
-        dict(
-            type="rect",
-            xref="paper", yref="paper",
-            x0=0, y0=0, x1=1, y1=1,
-            line=dict(color="#444", width=3),
-            fillcolor="rgba(0,0,0,0)",
-            layer="below"
-        )
-    ]
-)
+# --- Average Time Per Workday ---
+weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+df_all_time['weekday'] = df_all_time['date'].dt.day_name()
+df_avg_workday = df_all_time.groupby('weekday')['minutes'].mean().reindex(weekday_order).reset_index()
+fig4 = go.Figure(data=[go.Bar(
+    x=df_avg_workday['weekday'],
+    y=df_avg_workday['minutes'],
+    marker_color='#636efa'
+)])
 fig4.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
@@ -198,32 +135,14 @@ fig4.update_layout(
     title={'text': 'Average Time Spent Per Workday', 'x': 0.5, 'xanchor': 'center'}
 )
 
-cumulative_fig = px.bar(
-    cumulative_df,
-    x='done_date',
-    y='cumulative_minutes',
-    template='plotly_dark',
-    labels={'done_date': 'Date', 'cumulative_minutes': 'Cumulative Minutes Worked'},
-    title='Accumulated Work Time Across Days (Minutes)'
-)
-cumulative_fig.update_layout(
-    plot_bgcolor='#222',
-    paper_bgcolor='#222',
-    margin=dict(l=20, r=20, t=40, b=20),
-    font_color='#fff',
-    xaxis=dict(showgrid=False, zeroline=False),
-    yaxis=dict(showgrid=False, zeroline=False),
-    shapes=[
-        dict(
-            type="rect",
-            xref="paper", yref="paper",
-            x0=0, y0=0, x1=1, y1=1,
-            line=dict(color="#444", width=3),
-            fillcolor="rgba(0,0,0,0)",
-            layer="below"
-        )
-    ]
-)
+# --- Cumulative Work Time Plot ---
+df_time_per_day = df_time_per_day.sort_values('date')
+df_time_per_day['cumulative_minutes'] = df_time_per_day['minutes'].cumsum()
+cumulative_fig = go.Figure(data=[go.Bar(
+    x=df_time_per_day['date'],
+    y=df_time_per_day['cumulative_minutes'],
+    marker_color='#636efa'
+)])
 cumulative_fig.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
@@ -286,21 +205,6 @@ fig_tags.update_layout(
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 # --- Interactive Calendar (streamlit-calendar) ---
-# Prepare events: one per day worked, with minutes worked as title
-calendar_events = []
-for idx, row in tasks_per_day.iterrows():
-    date_str = row['done_date'].strftime('%Y-%m-%d')
-    minutes = df_done[df_done['done_date'] == row['done_date']]['timeSpent'].sum()
-    # Use green dot emoji and minutes as title
-    event_title = f"🟢 {int(minutes)} min"
-    calendar_events.append({
-        "title": event_title,
-        "start": date_str,
-        "end": date_str,
-        "allDay": True,
-        "display": "block",
-    })
-
 calendar_options = {
     "initialView": "dayGridMonth",
     "headerToolbar": {
