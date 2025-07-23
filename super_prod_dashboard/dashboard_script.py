@@ -287,9 +287,32 @@ st.markdown("""
 # (No slider in sidebar, set fixed height for plots)
 fixed_plot_height = 400
 
-# Set height for all plotly figures for a tighter grid
-for fig in [fig1, fig2, fig3, fig4, cumulative_fig]:
-    fig.update_layout(height=fixed_plot_height, margin=dict(l=20, r=20, t=40, b=20))
+# Set height for all plotly figures for a tighter grid, add more top margin, and truly center titles
+fig1.update_layout(
+    height=fixed_plot_height,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Tasks Completed Over Time', 'x': 0.5, 'xanchor': 'center'}
+)
+fig2.update_layout(
+    height=fixed_plot_height,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Time Spent Per Project (minutes)', 'x': 0.5, 'xanchor': 'center'}
+)
+fig3.update_layout(
+    height=fixed_plot_height,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Time Spent/day/project', 'x': 0.5, 'xanchor': 'center'}
+)
+fig4.update_layout(
+    height=fixed_plot_height,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Average Time Spent Per Workday', 'x': 0.5, 'xanchor': 'center'}
+)
+cumulative_fig.update_layout(
+    height=fixed_plot_height,
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Accumulated Work Time Across Days (Minutes)', 'x': 0.5, 'xanchor': 'center'}
+)
 
 # --- Paginated Dashboard: Page 1 = calendar, Pages 2+ = 1x2 grid of plots ---
 # List all plots in the desired order: accumulated, fig3, fig4, fig1, fig2
