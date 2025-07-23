@@ -265,73 +265,79 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Add custom CSS to force alignment in columns
+st.markdown("""
+    <style>
+    .element-container, .stColumn {
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: stretch;
+    }
+    .stPlotlyChart, .stPlotlyChart > div {
+        height: 100% !important;
+        min-height: 0 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- Plot Height Slider (non-intrusive, in sidebar) ---
 st.sidebar.markdown('#### Plot Height')
 plot_height = st.sidebar.slider('Set plot height (px)', min_value=200, max_value=800, value=400, step=10)
 
-# --- Paginated 2x2 Grid of Plots ---
-# List all six plots in the desired order: calendar, accumulated, fig3, fig4, fig1, fig2
-# Set height for all plotly figures for a tighter grid
-for fig in [fig1, fig2, fig3, fig4, cumulative_fig]:
-    fig.update_layout(height=plot_height, margin=dict(l=20, r=20, t=40, b=20))
+# --- Paginated Dashboard: Page 1 = calendar, Pages 2+ = 1x2 grid of plots ---
+# List all plots in the desired order: accumulated, fig3, fig4, fig1, fig2
+plot_keys = ['accumulated', 'fig3', 'fig4', 'fig1', 'fig2']
+plot_objs = {
+    'accumulated': cumulative_fig,
+    'fig3': fig3,
+    'fig4': fig4,
+    'fig1': fig1,
+    'fig2': fig2,
+}
 
-all_plots = []
-# Calendar plot (as a function to render)
-def calendar_plot():
+plots_per_page = 2  # 1x2 grid for pages 2+
+num_plot_pages = math.ceil(len(plot_keys) / plots_per_page)
+num_pages = 1 + num_plot_pages  # 1 for calendar, rest for plots
+
+if 'plot_page' not in st.session_state:
+    st.session_state['plot_page'] = 0
+page = st.session_state['plot_page']
+
+# Navigation arrows always visible, but disabled as appropriate
+col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
+with col_nav1:
+    st.button('⬅️', key='prev_page', disabled=(page == 0), on_click=lambda: st.session_state.update({'plot_page': max(0, page - 1)}))
+with col_nav2:
+    st.markdown(f"<h4 style='text-align:center; margin-bottom:0;'>Plots Page {page+1} of {num_pages}</h4>", unsafe_allow_html=True)
+with col_nav3:
+    st.button('➡️', key='next_page', disabled=(page == num_pages - 1), on_click=lambda: st.session_state.update({'plot_page': min(num_pages - 1, page + 1)}))
+
+if page == 0:
+    # Page 1: Calendar only, centered, natural height
+    st.markdown(f"<div style='display:flex;justify-content:center;align-items:center;'>", unsafe_allow_html=True)
     calendar(
         events=calendar_events,
         options=calendar_options,
         custom_css=custom_css,
         key="work-calendar"
     )
-all_plots.append(calendar_plot)
-# Accumulated plot (as a function to render)
-def accumulated_plot():
-    st.plotly_chart(cumulative_fig, use_container_width=True)
-all_plots.append(accumulated_plot)
-# Add the rest of the plots as lambdas for uniformity
-all_plots.append(lambda: st.plotly_chart(fig3, use_container_width=True))
-all_plots.append(lambda: st.plotly_chart(fig4, use_container_width=True))
-all_plots.append(lambda: st.plotly_chart(fig1, use_container_width=True))
-all_plots.append(lambda: st.plotly_chart(fig2, use_container_width=True))
-
-plots_per_page = 4  # 2x2 grid
-num_pages = math.ceil(len(all_plots) / plots_per_page)
-
-if 'plot_page' not in st.session_state:
-    st.session_state['plot_page'] = 0
-page = st.session_state['plot_page']
-
-# Navigation arrows only if more than one page
-col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
-with col_nav1:
-    if num_pages > 1:
-        if st.button('⬅️', key='prev_page', disabled=(page == 0)):
-            st.session_state['plot_page'] = max(0, page - 1)
-            st.rerun()
-with col_nav2:
-    st.markdown(f"<h4 style='text-align:center; margin-bottom:0;'>Plots Page {page+1} of {num_pages}</h4>", unsafe_allow_html=True)
-with col_nav3:
-    if num_pages > 1:
-        if st.button('➡️', key='next_page', disabled=(page == num_pages - 1)):
-            st.session_state['plot_page'] = min(num_pages - 1, page + 1)
-            st.rerun()
-
-# Only show the correct plots for the current page in a 2x2 grid
-start_idx = page * plots_per_page
-end_idx = start_idx + plots_per_page
-plots_to_show = all_plots[start_idx:end_idx]
-while len(plots_to_show) < plots_per_page:
-    plots_to_show.append(None)
-
-rows = 2
-cols = 2
-for row in range(rows):
-    cols_list = st.columns(cols, gap="small")
-    for col in range(cols):
-        plot_idx = row * cols + col
+    st.markdown("</div>", unsafe_allow_html=True)
+else:
+    # Pages 2+: 1x2 grid of plots
+    plot_page_idx = page - 1
+    start_idx = plot_page_idx * plots_per_page
+    end_idx = start_idx + plots_per_page
+    plots_to_show = plot_keys[start_idx:end_idx]
+    while len(plots_to_show) < plots_per_page:
+        plots_to_show.append(None)
+    cols_list = st.columns(2, gap="small")
+    for col in range(2):
+        plot_key = plots_to_show[col]
         with cols_list[col]:
-            if plots_to_show[plot_idx] is not None:
-                plots_to_show[plot_idx]()
+            if plot_key is not None:
+                st.plotly_chart(plot_objs[plot_key], use_container_width=True)
             else:
                 st.empty()
