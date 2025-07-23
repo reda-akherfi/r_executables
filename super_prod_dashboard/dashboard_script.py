@@ -131,7 +131,7 @@ fig3 = px.bar(
     color='title_project',
     template='plotly_dark',
     labels={'timeSpent': 'Time Spent (min)', 'done_date': 'Date', 'title_project': 'Project'},
-    title='Time Spent Per Day Per Project (Stacked)',
+    title='Time Spent/day/project',
     category_orders={'done_date': date_order}
 )
 fig3.update_layout(
