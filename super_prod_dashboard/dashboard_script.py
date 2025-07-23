@@ -265,11 +265,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- Plot Height Slider (non-intrusive, in sidebar) ---
+st.sidebar.markdown('#### Plot Height')
+plot_height = st.sidebar.slider('Set plot height (px)', min_value=200, max_value=800, value=400, step=10)
+
 # --- Paginated 2x2 Grid of Plots ---
 # List all six plots in the desired order: calendar, accumulated, fig3, fig4, fig1, fig2
-# Set fixed height for all plotly figures for a tighter grid
+# Set height for all plotly figures for a tighter grid
 for fig in [fig1, fig2, fig3, fig4, cumulative_fig]:
-    fig.update_layout(height=400, margin=dict(l=20, r=20, t=40, b=20))
+    fig.update_layout(height=plot_height, margin=dict(l=20, r=20, t=40, b=20))
 
 all_plots = []
 # Calendar plot (as a function to render)
