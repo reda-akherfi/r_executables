@@ -283,9 +283,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Plot Height Slider (non-intrusive, in sidebar) ---
-st.sidebar.markdown('#### Plot Height')
-plot_height = st.sidebar.slider('Set plot height (px)', min_value=200, max_value=800, value=400, step=10)
+# --- Remove Plot Height Slider ---
+# (No slider in sidebar, set fixed height for plots)
+fixed_plot_height = 400
+
+# Set height for all plotly figures for a tighter grid
+for fig in [fig1, fig2, fig3, fig4, cumulative_fig]:
+    fig.update_layout(height=fixed_plot_height, margin=dict(l=20, r=20, t=40, b=20))
 
 # --- Paginated Dashboard: Page 1 = calendar, Pages 2+ = 1x2 grid of plots ---
 # List all plots in the desired order: accumulated, fig3, fig4, fig1, fig2
