@@ -5,6 +5,7 @@ from datetime import datetime
 import plotly.express as px
 # Add import for streamlit-calendar
 from streamlit_calendar import calendar
+import math
 
 # --- Load JSON data ---
 with open('super-productivity-backup.json', 'r', encoding='utf-8') as f:
@@ -264,40 +265,69 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Render the calendar at the top
-st.markdown("### Work Calendar (Green dot = worked, number = minutes)")
-calendar(
-    events=calendar_events,
-    options=calendar_options,
-    custom_css=custom_css,
-    key="work-calendar"
-)
+# --- Paginated 2x2 Grid of Plots ---
+# List all six plots in the desired order: calendar, accumulated, fig3, fig4, fig1, fig2
+# Set fixed height for all plotly figures for a tighter grid
+for fig in [fig1, fig2, fig3, fig4, cumulative_fig]:
+    fig.update_layout(height=400, margin=dict(l=20, r=20, t=40, b=20))
 
-# Helper function for bordered plot containers
-def bordered_plot(header, fig):
-    # Open a container so both header and plot are grouped
-    with st.container():
-        # Open the styled div
-        st.markdown(
-            "<div class='plot-box'>",
-            unsafe_allow_html=True
-        )
-        # Render header and plot inside the div
-        st.markdown(f"<h3 style='color:#fff'>{header}</h3>", unsafe_allow_html=True)
-        st.plotly_chart(fig, use_container_width=True)
-        # Close the div
-        st.markdown("</div>", unsafe_allow_html=True)
+all_plots = []
+# Calendar plot (as a function to render)
+def calendar_plot():
+    calendar(
+        events=calendar_events,
+        options=calendar_options,
+        custom_css=custom_css,
+        key="work-calendar"
+    )
+all_plots.append(calendar_plot)
+# Accumulated plot (as a function to render)
+def accumulated_plot():
+    st.plotly_chart(cumulative_fig, use_container_width=True)
+all_plots.append(accumulated_plot)
+# Add the rest of the plots as lambdas for uniformity
+all_plots.append(lambda: st.plotly_chart(fig3, use_container_width=True))
+all_plots.append(lambda: st.plotly_chart(fig4, use_container_width=True))
+all_plots.append(lambda: st.plotly_chart(fig1, use_container_width=True))
+all_plots.append(lambda: st.plotly_chart(fig2, use_container_width=True))
 
-col1, col2 = st.columns(2)
-with col1:
-    st.plotly_chart(fig1, use_container_width=True)
-with col2:
-    st.plotly_chart(fig2, use_container_width=True)
+plots_per_page = 4  # 2x2 grid
+num_pages = math.ceil(len(all_plots) / plots_per_page)
 
-col3, col4 = st.columns(2)
-with col3:
-    st.plotly_chart(fig3, use_container_width=True)
-with col4:
-    st.plotly_chart(fig4, use_container_width=True)
+if 'plot_page' not in st.session_state:
+    st.session_state['plot_page'] = 0
+page = st.session_state['plot_page']
 
-st.plotly_chart(cumulative_fig, use_container_width=True)
+# Navigation arrows only if more than one page
+col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
+with col_nav1:
+    if num_pages > 1:
+        if st.button('⬅️', key='prev_page', disabled=(page == 0)):
+            st.session_state['plot_page'] = max(0, page - 1)
+            st.rerun()
+with col_nav2:
+    st.markdown(f"<h4 style='text-align:center; margin-bottom:0;'>Plots Page {page+1} of {num_pages}</h4>", unsafe_allow_html=True)
+with col_nav3:
+    if num_pages > 1:
+        if st.button('➡️', key='next_page', disabled=(page == num_pages - 1)):
+            st.session_state['plot_page'] = min(num_pages - 1, page + 1)
+            st.rerun()
+
+# Only show the correct plots for the current page in a 2x2 grid
+start_idx = page * plots_per_page
+end_idx = start_idx + plots_per_page
+plots_to_show = all_plots[start_idx:end_idx]
+while len(plots_to_show) < plots_per_page:
+    plots_to_show.append(None)
+
+rows = 2
+cols = 2
+for row in range(rows):
+    cols_list = st.columns(cols, gap="small")
+    for col in range(cols):
+        plot_idx = row * cols + col
+        with cols_list[col]:
+            if plots_to_show[plot_idx] is not None:
+                plots_to_show[plot_idx]()
+            else:
+                st.empty()
