@@ -50,6 +50,11 @@ tasks_per_day = df_done.groupby('done_date').size().reset_index(name='tasks_comp
 
 # --- Time Spent Per Project ---
 time_per_project = df_tasks.groupby('title_project')['timeSpent'].sum().reset_index()
+# Ensure all projects are included, even those with 0 minutes
+time_per_project = df_projects[['title']].merge(
+    time_per_project, left_on='title', right_on='title_project', how='left'
+)
+time_per_project['timeSpent'] = time_per_project['timeSpent'].fillna(0)
 
 # --- Stacked Bar: Time Spent Per Day Per Project ---
 df_stacked = df_tasks[df_tasks['isDone'] & df_tasks['doneOn'].notnull()].copy()
@@ -104,13 +109,17 @@ fig1.update_layout(
         )
     ]
 )
+fig1.update_layout(
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Tasks Completed Over Time', 'x': 0.5, 'xanchor': 'center'}
+)
 
 fig2 = px.pie(
-    time_per_project.sort_values('title_project'),
-    names='title_project',
+    time_per_project.sort_values('title'),
+    names='title',
     values='timeSpent',
     template='plotly_dark',
-    labels={'title_project': 'Project', 'timeSpent': 'Time Spent (min)'},
+    labels={'title': 'Project', 'timeSpent': 'Time Spent (min)'},
     title='Time Spent Per Project (minutes)'
 )
 fig2.update_layout(
@@ -128,6 +137,10 @@ fig2.update_layout(
             layer="below"
         )
     ]
+)
+fig2.update_layout(
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Time Spent Per Project (minutes)', 'x': 0.5, 'xanchor': 'center'}
 )
 
 fig3 = px.bar(
@@ -158,6 +171,10 @@ fig3.update_layout(
         )
     ]
 )
+fig3.update_layout(
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Time Spent/day/project', 'x': 0.5, 'xanchor': 'center'}
+)
 
 fig4 = px.bar(
     avg_by_weekday,
@@ -186,6 +203,10 @@ fig4.update_layout(
         )
     ]
 )
+fig4.update_layout(
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Average Time Spent Per Workday', 'x': 0.5, 'xanchor': 'center'}
+)
 
 cumulative_fig = px.bar(
     cumulative_df,
@@ -212,6 +233,10 @@ cumulative_fig.update_layout(
             layer="below"
         )
     ]
+)
+cumulative_fig.update_layout(
+    margin=dict(l=20, r=20, t=120, b=20),
+    title={'text': 'Accumulated Work Time Across Days (Minutes)', 'x': 0.5, 'xanchor': 'center'}
 )
 
 # --- Create Pie Plot for Tag Distribution ---
