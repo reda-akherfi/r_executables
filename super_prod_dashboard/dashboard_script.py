@@ -208,9 +208,12 @@ simple_counters = data['simpleCounter']['entities']
 water_counter = simple_counters['wQuxogx-iByRYzzw9_LdZ']
 water_data = water_counter.get('countOnDay', {})
 water_dates = list(water_data.keys())
-water_liters = [v * 0.75 for v in water_data.values()]
-df_water = pd.DataFrame({'date': pd.to_datetime(water_dates), 'liters': water_liters})
-fig_water = go.Figure(data=[go.Bar(x=df_water['date'], y=df_water['liters'], marker_color='#1f77b4')])
+water_liters = [v * 1.0 for v in water_data.values()]  # 1 unit = 1L
+bar_colors = ['#2ca02c' if v >= 2 else '#d62728' for v in water_liters]  # green if >=2L, else red
+
+df_water = pd.DataFrame({'date': pd.to_datetime(water_dates), 'liters': water_liters, 'color': bar_colors})
+fig_water = go.Figure(data=[go.Bar(x=df_water['date'], y=df_water['liters'], marker_color=df_water['color'])])
+fig_water.add_hline(y=2, line_dash='dash', line_color='#888', annotation_text='2L Recommended', annotation_position='top left')
 fig_water.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
