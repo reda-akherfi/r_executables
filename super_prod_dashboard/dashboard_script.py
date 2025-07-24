@@ -114,7 +114,10 @@ fig2 = go.Figure(data=[go.Pie(
     values=time_per_project['minutes'],
     hole=0,
     customdata=time_per_project['hm_str'],
-    hovertemplate='%{label}: %{customdata}<extra></extra>'
+    hovertemplate='%{label}: %{customdata}<extra></extra>',
+    textfont=dict(color='white'),
+    textposition='outside',
+    textinfo='label+percent',
 )])
 fig2.update_layout(
     plot_bgcolor='#000',
@@ -235,7 +238,11 @@ for label in pie_labels:
 
 fig_tags = go.Figure(data=[go.Pie(labels=pie_labels, values=pie_values, marker=dict(colors=pie_colors), hole=0,
                                   customdata=pie_hm_strs,
-                                  hovertemplate='%{label}: %{customdata}<extra></extra>')])
+                                  hovertemplate='%{label}: %{customdata}<extra></extra>',
+                                  textfont=dict(color='white'),
+                                  textposition='outside',
+                                  textinfo='label+percent',
+                                  )])
 fig_tags.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
