@@ -17,6 +17,7 @@ with open('super-productivity-backup.json', 'r', encoding='utf-8') as f:
 # --- Normalize Tasks ---
 tasks = []
 for task_id, task in data['task']['entities'].items():
+    is_leaf = not task.get('subTaskIds')  # True if no subtasks
     tasks.append({
         'id': task['id'],
         'title': task['title'],
@@ -28,7 +29,8 @@ for task_id, task in data['task']['entities'].items():
         'doneOn': datetime.fromtimestamp(task['doneOn'] / 1000) if task.get('doneOn') else None,
         'projectId': task['projectId'],
         'notes': task.get('notes', ''),
-        'tagIds': task.get('tagIds', []),  # <-- ADD THIS LINE
+        'tagIds': task.get('tagIds', []),
+        'is_leaf': is_leaf,
     })
 df_tasks = pd.DataFrame(tasks)
 
@@ -44,9 +46,9 @@ df_projects = pd.DataFrame(projects)
 # --- Merge for richer info ---
 df_tasks = df_tasks.merge(df_projects, left_on='projectId', right_on='id', suffixes=('', '_project'))
 
-# --- Build a DataFrame of all time spent per day (all tasks, done or not) ---
+# --- Build a DataFrame of all time spent per day (leaf tasks only) ---
 all_time_by_day = defaultdict(lambda: defaultdict(float))  # {date: {project: minutes}}
-for _, task in df_tasks.iterrows():
+for _, task in df_tasks[df_tasks['is_leaf']].iterrows():
     project = task['title_project']
     if 'timeSpentOnDay' in data['task']['entities'][task['id']]:
         for day, ms in data['task']['entities'][task['id']]['timeSpentOnDay'].items():
@@ -119,24 +121,32 @@ fig3.update_layout(
     title={'text': 'Time Spent/day/project', 'x': 0.5, 'xanchor': 'center'}
 )
 
-# --- Average Time Per Workday ---
+# --- Average Time Per Workday (Stacked by Project, All Weekdays) ---
 weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-# Step 1: Sum minutes per day (across all projects)
-df_daily = df_all_time.groupby('date')['minutes'].sum().reset_index()
+# Step 1: Sum minutes per day per project
+df_daily_proj = df_all_time.groupby(['date', 'project'])['minutes'].sum().reset_index()
 # Step 2: Add weekday
-df_daily['weekday'] = df_daily['date'].dt.day_name()
-# Step 3: Average per weekday
-df_avg_workday = df_daily.groupby('weekday')['minutes'].mean().reindex(weekday_order).reset_index()
-fig4 = go.Figure(data=[go.Bar(
-    x=df_avg_workday['weekday'],
-    y=df_avg_workday['minutes'],
-    marker_color='#636efa'
-)])
+df_daily_proj['weekday'] = df_daily_proj['date'].dt.day_name()
+# Step 3: Average per weekday per project
+df_avg_workday_proj = df_daily_proj.groupby(['weekday', 'project'])['minutes'].mean().reset_index()
+
+# Ensure all combinations of weekday and project exist
+all_projects = df_avg_workday_proj['project'].unique()
+full_index = pd.MultiIndex.from_product([weekday_order, all_projects], names=['weekday', 'project'])
+df_avg_workday_proj = df_avg_workday_proj.set_index(['weekday', 'project']).reindex(full_index, fill_value=0).reset_index()
+df_avg_workday_proj['weekday'] = pd.Categorical(df_avg_workday_proj['weekday'], categories=weekday_order, ordered=True)
+df_avg_workday_proj = df_avg_workday_proj.sort_values(['weekday', 'project'])
+
+fig4 = go.Figure()
+for project in all_projects:
+    proj_data = df_avg_workday_proj[df_avg_workday_proj['project'] == project]
+    fig4.add_bar(x=proj_data['weekday'], y=proj_data['minutes'], name=project)
 fig4.update_layout(
+    barmode='stack',
     plot_bgcolor='#000',
     paper_bgcolor='#000',
     margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Average Time Spent Per Workday', 'x': 0.5, 'xanchor': 'center'}
+    title={'text': 'Average Time Spent Per Workday (Stacked by Project)', 'x': 0.5, 'xanchor': 'center'}
 )
 
 # --- Cumulative Work Time Plot ---
