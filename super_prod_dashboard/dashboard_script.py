@@ -121,8 +121,12 @@ fig3.update_layout(
 
 # --- Average Time Per Workday ---
 weekday_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-df_all_time['weekday'] = df_all_time['date'].dt.day_name()
-df_avg_workday = df_all_time.groupby('weekday')['minutes'].mean().reindex(weekday_order).reset_index()
+# Step 1: Sum minutes per day (across all projects)
+df_daily = df_all_time.groupby('date')['minutes'].sum().reset_index()
+# Step 2: Add weekday
+df_daily['weekday'] = df_daily['date'].dt.day_name()
+# Step 3: Average per weekday
+df_avg_workday = df_daily.groupby('weekday')['minutes'].mean().reindex(weekday_order).reset_index()
 fig4 = go.Figure(data=[go.Bar(
     x=df_avg_workday['weekday'],
     y=df_avg_workday['minutes'],
