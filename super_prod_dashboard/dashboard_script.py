@@ -74,13 +74,26 @@ for day, group in df_all_time.groupby('date'):
         "display": "block",
     })
 
+# --- Helper: Format minutes as 'Xh Ym' ---
+def minutes_to_hm_str(minutes):
+    minutes = int(round(minutes))
+    h = minutes // 60
+    m = minutes % 60
+    if h > 0:
+        return f"{h}h {m}m"
+    else:
+        return f"{m}m"
+
 # --- Tasks Completed Over Time (now: All Time Spent Per Day) ---
 df_time_per_day = df_all_time.groupby('date')['minutes'].sum().reset_index()
+df_time_per_day['hm_str'] = df_time_per_day['minutes'].apply(minutes_to_hm_str)
 
 fig1 = go.Figure(data=[go.Bar(
     x=df_time_per_day['date'],
     y=df_time_per_day['minutes'],
-    marker_color='#636efa'
+    marker_color='#636efa',
+    customdata=df_time_per_day['hm_str'],
+    hovertemplate='%{x}<br>%{customdata}<extra></extra>'
 )])
 fig1.update_layout(
     plot_bgcolor='#000',
@@ -95,10 +108,13 @@ time_per_project = df_projects[['title']].merge(
     time_per_project, left_on='title', right_on='project', how='left'
 )
 time_per_project['minutes'] = time_per_project['minutes'].fillna(0)
+time_per_project['hm_str'] = time_per_project['minutes'].apply(minutes_to_hm_str)
 fig2 = go.Figure(data=[go.Pie(
     labels=time_per_project['title'],
     values=time_per_project['minutes'],
-    hole=0
+    hole=0,
+    customdata=time_per_project['hm_str'],
+    hovertemplate='%{label}: %{customdata}<extra></extra>'
 )])
 fig2.update_layout(
     plot_bgcolor='#000',
@@ -111,8 +127,11 @@ fig2.update_layout(
 # --- Stacked Bar: Time Spent Per Day Per Project ---
 fig3 = go.Figure()
 for project in df_all_time['project'].unique():
-    proj_data = df_all_time[df_all_time['project'] == project]
-    fig3.add_bar(x=proj_data['date'], y=proj_data['minutes'], name=project)
+    proj_data = df_all_time[df_all_time['project'] == project].copy()
+    proj_data['hm_str'] = proj_data['minutes'].apply(minutes_to_hm_str)
+    fig3.add_bar(x=proj_data['date'], y=proj_data['minutes'], name=project,
+                 customdata=proj_data['hm_str'],
+                 hovertemplate='%{x}<br>%{customdata}<extra></extra>')
 fig3.update_layout(
     barmode='stack',
     plot_bgcolor='#000',
@@ -139,8 +158,11 @@ df_avg_workday_proj = df_avg_workday_proj.sort_values(['weekday', 'project'])
 
 fig4 = go.Figure()
 for project in all_projects:
-    proj_data = df_avg_workday_proj[df_avg_workday_proj['project'] == project]
-    fig4.add_bar(x=proj_data['weekday'], y=proj_data['minutes'], name=project)
+    proj_data = df_avg_workday_proj[df_avg_workday_proj['project'] == project].copy()
+    proj_data['hm_str'] = proj_data['minutes'].apply(minutes_to_hm_str)
+    fig4.add_bar(x=proj_data['weekday'], y=proj_data['minutes'], name=project,
+                 customdata=proj_data['hm_str'],
+                 hovertemplate='%{x}<br>%{customdata}<extra></extra>')
 fig4.update_layout(
     barmode='stack',
     plot_bgcolor='#000',
@@ -152,10 +174,13 @@ fig4.update_layout(
 # --- Cumulative Work Time Plot ---
 df_time_per_day = df_time_per_day.sort_values('date')
 df_time_per_day['cumulative_minutes'] = df_time_per_day['minutes'].cumsum()
+df_time_per_day['cumulative_hm_str'] = df_time_per_day['cumulative_minutes'].apply(minutes_to_hm_str)
 cumulative_fig = go.Figure(data=[go.Bar(
     x=df_time_per_day['date'],
     y=df_time_per_day['cumulative_minutes'],
-    marker_color='#636efa'
+    marker_color='#636efa',
+    customdata=df_time_per_day['cumulative_hm_str'],
+    hovertemplate='%{x}<br>%{customdata}<extra></extra>'
 )])
 cumulative_fig.update_layout(
     plot_bgcolor='#000',
@@ -194,9 +219,11 @@ untagged_time = df_tags[~df_tags['has_tag']]['timeSpent'].sum()
 # Combine
 pie_labels = list(tag_time['tag']) if not tag_time.empty else []
 pie_values = list(tag_time['timeSpent']) if not tag_time.empty else []
+pie_hm_strs = [minutes_to_hm_str(m) for m in pie_values]
 if untagged_time > 0 or not pie_labels:
     pie_labels.append('Untagged')
     pie_values.append(untagged_time)
+    pie_hm_strs.append(minutes_to_hm_str(untagged_time))
 
 # Set colors: grey for untagged, default for others
 pie_colors = []
@@ -206,7 +233,9 @@ for label in pie_labels:
     else:
         pie_colors.append(None)
 
-fig_tags = go.Figure(data=[go.Pie(labels=pie_labels, values=pie_values, marker=dict(colors=pie_colors), hole=0)])
+fig_tags = go.Figure(data=[go.Pie(labels=pie_labels, values=pie_values, marker=dict(colors=pie_colors), hole=0,
+                                  customdata=pie_hm_strs,
+                                  hovertemplate='%{label}: %{customdata}<extra></extra>')])
 fig_tags.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
