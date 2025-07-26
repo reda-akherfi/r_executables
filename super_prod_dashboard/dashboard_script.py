@@ -11,6 +11,29 @@ import numpy as np
 from collections import defaultdict
 from r_spdash.io.data_loader import load_super_productivity_data
 from r_spdash.viz.color_sync import create_color_sync
+import time
+
+# --- File Watcher for Live Reload ---
+from r_spdash.io.data_loader import SuperProductivityDataLoader
+
+WATCH_INTERVAL_SEC = 10
+if 'last_file_path' not in st.session_state or 'last_file_mtime' not in st.session_state:
+    st.session_state['last_file_path'] = None
+    st.session_state['last_file_mtime'] = None
+    st.session_state['last_check'] = 0
+
+# Only check every WATCH_INTERVAL_SEC seconds
+now = time.time()
+if now - st.session_state['last_check'] > WATCH_INTERVAL_SEC:
+    loader = SuperProductivityDataLoader()
+    info = loader.get_most_recent_file_info()
+    st.session_state['last_check'] = now
+    if info:
+        if (st.session_state['last_file_path'] != info['path'] or
+            st.session_state['last_file_mtime'] != info['mtime']):
+            st.session_state['last_file_path'] = info['path']
+            st.session_state['last_file_mtime'] = info['mtime']
+            st.rerun()
 
 # --- Load JSON data ---
 try:

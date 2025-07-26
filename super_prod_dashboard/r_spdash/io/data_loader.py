@@ -2,7 +2,7 @@ import json
 import os
 import glob
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 
 class SuperProductivityDataLoader:
     """
@@ -10,18 +10,20 @@ class SuperProductivityDataLoader:
     Searches for the most recent backup file from multiple locations.
     """
     def __init__(self):
-        self.backup_directories = [
-            r"C:\Users\redaa\AppData\Roaming\superProductivity\backups",
-            "."  # Current project directory
+        # Each tuple: (directory, pattern)
+        self.search_locations: List[Tuple[str, str]] = [
+            (r"C:\Users\redaa\AppData\Roaming\superProductivity\backups", "*.json"),
+            (r"C:\Users\redaa\Downloads", "super-productivity-backup*.json"),
+            (".", "super-productivity-backup*.json"),
         ]
 
     def find_json_files(self) -> list:
         json_files = []
-        for directory in self.backup_directories:
+        for directory, pattern in self.search_locations:
             if not os.path.exists(directory):
                 continue
-            pattern = os.path.join(directory, "*.json")
-            files = glob.glob(pattern)
+            search_pattern = os.path.join(directory, pattern)
+            files = glob.glob(search_pattern)
             for file_path in files:
                 try:
                     mtime = os.path.getmtime(file_path)
@@ -39,6 +41,15 @@ class SuperProductivityDataLoader:
             return None
         sorted_files = sorted(json_files, key=lambda x: x['mtime'], reverse=True)
         return sorted_files[0]
+
+    def get_most_recent_file_info(self) -> Optional[Dict[str, Any]]:
+        """
+        Return the most recent file info (path, mtime, datetime) or None if no files found.
+        """
+        json_files = self.find_json_files()
+        if not json_files:
+            return None
+        return self.get_most_recent_file(json_files)
 
     def validate_super_productivity_file(self, file_path: str) -> bool:
         try:
@@ -61,7 +72,7 @@ class SuperProductivityDataLoader:
         if not json_files:
             raise FileNotFoundError(
                 "No JSON files found in the specified directories. "
-                f"Searched in: {', '.join(self.backup_directories)}"
+                f"Searched in: {', '.join([d for d, _ in self.search_locations])}"
             )
         most_recent = self.get_most_recent_file(json_files)
         if not most_recent:
