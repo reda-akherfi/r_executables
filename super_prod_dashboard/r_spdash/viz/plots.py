@@ -162,7 +162,7 @@ def create_figures(df_all_time, df_projects, color_sync):
 
 def create_tags_pie_chart(df_tasks, data, color_sync):
     """
-    Create pie chart for tag distribution.
+    Create pie chart for tag distribution, including all tags (even those with zero minutes).
     
     Args:
         df_tasks (pd.DataFrame): Normalized task data
@@ -192,27 +192,25 @@ def create_tags_pie_chart(df_tasks, data, color_sync):
         tag_map = {k: v['title'] for k, v in data['tag']['entities'].items()}
         tag_time['tag'] = tag_time['tagIds'].map(tag_map)
     else:
+        tag_map = {}
         tag_time['tag'] = tag_time['tagIds']
     
-    # Time spent for untagged tasks
-    untagged_time = df_tags[~df_tags['has_tag']]['timeSpent'].sum()
-    
-    # Combine
-    pie_labels = list(tag_time['tag']) if not tag_time.empty else []
-    pie_values = list(tag_time['timeSpent']) if not tag_time.empty else []
+    # --- Ensure all tags are present, even if zero ---
+    all_tags = tag_map.values() if tag_map else []
+    tag_time_dict = dict(zip(tag_time['tag'], tag_time['timeSpent']))
+    pie_labels = list(all_tags)
+    pie_values = [tag_time_dict.get(label, 0) for label in pie_labels]
     pie_hm_strs = [minutes_to_hm_str(m) for m in pie_values]
     
     # Add synchronized colors and display names with icons
     pie_display_labels = []
     pie_colors = []
     for label in pie_labels:
-        if label == 'Untagged':
-            pie_display_labels.append('Untagged')
-            pie_colors.append('grey')
-        else:
-            pie_display_labels.append(color_sync.get_tag_display_name(label))
-            pie_colors.append(color_sync.get_tag_color(label))
+        pie_display_labels.append(color_sync.get_tag_display_name(label))
+        pie_colors.append(color_sync.get_tag_color(label))
     
+    # Time spent for untagged tasks
+    untagged_time = df_tags[~df_tags['has_tag']]['timeSpent'].sum()
     if untagged_time > 0 or not pie_labels:
         pie_display_labels.append('Untagged')
         pie_values.append(untagged_time)
