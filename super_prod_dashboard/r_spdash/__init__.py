@@ -4,15 +4,15 @@ Super Productivity Dashboard package.
 A modular dashboard for visualizing SuperProductivity data.
 """
 from .io import (
-    load_super_productivity_data, 
+    load_super_productivity_data,
     SuperProductivityDataLoader,
-    normalize_tasks, 
-    normalize_projects, 
+    normalize_tasks,
+    normalize_projects,
     build_time_by_day
 )
 from .viz import (
-    create_figures, 
-    create_calendar_events, 
+    create_figures,
+    create_calendar_events,
     create_placeholder_figure,
     create_tags_pie_chart,
     create_simple_counter_plots,
@@ -43,4 +43,4 @@ __all__ = [
     'render_calendar', 
     'render_navigation',
     'render_plots'
-] 
+]

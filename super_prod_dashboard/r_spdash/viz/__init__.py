@@ -2,8 +2,8 @@
 Visualization modules for the Super Productivity Dashboard.
 """
 from .plots import (
-    create_figures, 
-    create_calendar_events, 
+    create_figures,
+    create_calendar_events,
     create_placeholder_figure,
     create_tags_pie_chart,
     create_simple_counter_plots
@@ -17,4 +17,4 @@ __all__ = [
     'create_tags_pie_chart',
     'create_simple_counter_plots',
     'create_color_sync'
-] 
+]
