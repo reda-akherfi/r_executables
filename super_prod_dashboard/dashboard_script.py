@@ -303,15 +303,29 @@ media_dates = list(media_data.keys())
 media_hours = [v / 1000 / 60 / 60 for v in media_data.values()]
 bar_colors_media = ['#2ca02c' if v < 4 else '#d62728' for v in media_hours]  # green if <4h, else red
 
-df_media = pd.DataFrame({'date': pd.to_datetime(media_dates), 'hours': media_hours, 'color': bar_colors_media})
-fig_media = go.Figure(data=[go.Bar(x=df_media['date'], y=df_media['hours'], marker_color=df_media['color'])])
+# Human-readable time for media
+media_hm_strs = [minutes_to_hm_str(h * 60) for h in media_hours]
+df_media = pd.DataFrame({'date': pd.to_datetime(media_dates), 'hours': media_hours, 'color': bar_colors_media, 'hm_str': media_hm_strs})
+fig_media = go.Figure(data=[go.Bar(
+    x=df_media['date'],
+    y=df_media['hours'],
+    marker_color=df_media['color'],
+    customdata=df_media['hm_str'],
+    hovertemplate='%{x}<br>%{customdata}<extra></extra>'
+)])
 fig_media.add_hline(y=4, line_dash='dash', line_color='#888', annotation_text='4h Limit', annotation_position='top left')
 fig_media.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
     height=400,
     margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Daily Media Watching (Hours)', 'x': 0.5, 'xanchor': 'center'}
+    title={'text': 'Daily Media Watching (Hours)', 'x': 0.5, 'xanchor': 'center'},
+    yaxis=dict(
+        title='Time Watched',
+        tickmode='array',
+        tickvals=df_media['hours'],
+        ticktext=df_media['hm_str'],
+    )
 )
 
 # Workout Tracker
@@ -319,14 +333,28 @@ workout_counter = simple_counters['dD4T3Ulg16FpTqlkwTtpq']
 workout_data = workout_counter.get('countOnDay', {})
 workout_dates = list(workout_data.keys())
 workout_hours = [v / 1000 / 60 / 60 for v in workout_data.values()]
-df_workout = pd.DataFrame({'date': pd.to_datetime(workout_dates), 'hours': workout_hours})
-fig_workout = go.Figure(data=[go.Bar(x=df_workout['date'], y=df_workout['hours'], marker_color='#2ca02c')])
+# Human-readable time for workout
+workout_hm_strs = [minutes_to_hm_str(h * 60) for h in workout_hours]
+df_workout = pd.DataFrame({'date': pd.to_datetime(workout_dates), 'hours': workout_hours, 'hm_str': workout_hm_strs})
+fig_workout = go.Figure(data=[go.Bar(
+    x=df_workout['date'],
+    y=df_workout['hours'],
+    marker_color='#2ca02c',
+    customdata=df_workout['hm_str'],
+    hovertemplate='%{x}<br>%{customdata}<extra></extra>'
+)])
 fig_workout.update_layout(
     plot_bgcolor='#000',
     paper_bgcolor='#000',
     height=400,
     margin=dict(l=20, r=20, t=120, b=20),
-    title={'text': 'Daily Workout Time (Hours)', 'x': 0.5, 'xanchor': 'center'}
+    title={'text': 'Daily Workout Time (Hours)', 'x': 0.5, 'xanchor': 'center'},
+    yaxis=dict(
+        title='Workout Time',
+        tickmode='array',
+        tickvals=df_workout['hours'],
+        ticktext=df_workout['hm_str'],
+    )
 )
 
 extra_plot_keys = ['water', 'media', 'workout']
