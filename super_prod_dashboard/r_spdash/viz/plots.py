@@ -394,3 +394,204 @@ def create_placeholder_figure():
         title={'text': 'Placeholder', 'x': 0.5, 'xanchor': 'center'}
     )
     return placeholder_fig
+
+
+def create_tag_time_trends_plot(df_tasks, data, color_sync):
+    """
+    Create a plot showing how tag usage changes over time.
+    
+    Args:
+        df_tasks (pd.DataFrame): Normalized task data
+        data (dict): Raw SuperProductivity data
+        color_sync: Color synchronization object
+        
+    Returns:
+        go.Figure: Tag time trends plot
+    """
+    # Get tag mapping
+    tag_map = {}
+    if 'tag' in data and 'entities' in data['tag']:
+        tag_map = {k: v['title'] for k, v in data['tag']['entities'].items()}
+    
+    # Process tag data over time
+    tag_time_data = {}
+    for _, task in df_tasks.iterrows():
+        if 'timeSpentOnDay' in data['task']['entities'][task['id']]:
+            task_tags = task.get('tagIds', [])
+            if not isinstance(task_tags, list):
+                task_tags = [task_tags] if task_tags else []
+            
+            for day, ms in data['task']['entities'][task['id']]['timeSpentOnDay'].items():
+                minutes = ms / 1000 / 60
+                for tag_id in task_tags:
+                    if tag_id in tag_map:
+                        tag_name = tag_map[tag_id]
+                        if tag_name not in tag_time_data:
+                            tag_time_data[tag_name] = {}
+                        if day not in tag_time_data[tag_name]:
+                            tag_time_data[tag_name][day] = 0
+                        tag_time_data[tag_name][day] += minutes
+    
+    # Create line plot
+    fig = go.Figure()
+    
+    # Sort tags by total time spent
+    tag_totals = {tag: sum(days.values()) for tag, days in tag_time_data.items()}
+    sorted_tags = sorted(tag_totals.items(), key=lambda x: x[1], reverse=True)
+    
+    # Plot top 8 tags
+    for tag_name, _ in sorted_tags[:8]:
+        if tag_name in tag_time_data:
+            dates = sorted(tag_time_data[tag_name].keys())
+            values = [tag_time_data[tag_name][date] for date in dates]
+            
+            fig.add_trace(go.Scatter(
+                x=pd.to_datetime(dates),
+                y=values,
+                mode='lines+markers',
+                name=color_sync.get_tag_display_name(tag_name),
+                line=dict(color=color_sync.get_tag_color(tag_name), width=2),
+                marker=dict(size=4),
+                hovertemplate='%{x}<br>%{y:.1f} min<extra></extra>'
+            ))
+    
+    fig.update_layout(
+        plot_bgcolor='#000',
+        paper_bgcolor='#000',
+        height=400,
+        margin=dict(l=20, r=20, t=120, b=20),
+        title={'text': 'Tag Usage Trends Over Time', 'x': 0.5, 'xanchor': 'center'},
+        xaxis=dict(title='Date', gridcolor='#333'),
+        yaxis=dict(title='Time Spent (minutes)', gridcolor='#333'),
+        legend=dict(bgcolor='rgba(0,0,0,0.8)', bordercolor='#333')
+    )
+    
+    return fig
+
+
+def create_project_efficiency_plot(df_tasks, df_projects, color_sync):
+    """
+    Create a plot showing time spent vs. tasks completed per project.
+    
+    Args:
+        df_tasks (pd.DataFrame): Normalized task data
+        df_projects (pd.DataFrame): Project data
+        color_sync: Color synchronization object
+        
+    Returns:
+        go.Figure: Project efficiency scatter plot
+    """
+    # Calculate efficiency metrics per project
+    project_stats = {}
+    
+    for _, project in df_projects.iterrows():
+        project_tasks = df_tasks[df_tasks['projectId'] == project['id']]
+        
+        if len(project_tasks) > 0:
+            total_time = project_tasks['timeSpent'].sum()
+            completed_tasks = len(project_tasks[project_tasks['isDone'] == True])
+            total_tasks = len(project_tasks)
+            completion_rate = completed_tasks / total_tasks if total_tasks > 0 else 0
+            
+            project_stats[project['title']] = {
+                'total_time': total_time,
+                'completed_tasks': completed_tasks,
+                'total_tasks': total_tasks,
+                'completion_rate': completion_rate,
+                'avg_time_per_task': total_time / total_tasks if total_tasks > 0 else 0
+            }
+    
+    # Create scatter plot
+    fig = go.Figure()
+    
+    for project_name, stats in project_stats.items():
+        if stats['total_time'] > 0:  # Only show projects with time spent
+            fig.add_trace(go.Scatter(
+                x=[stats['total_time']],
+                y=[stats['completion_rate'] * 100],
+                mode='markers',
+                name=color_sync.get_project_display_name(project_name),
+                marker=dict(
+                    size=stats['total_tasks'] * 2 + 10,  # Size based on number of tasks
+                    color=color_sync.get_project_color(project_name),
+                    line=dict(color='white', width=1)
+                ),
+                text=f"{project_name}<br>Tasks: {stats['total_tasks']}<br>Time: {stats['total_time']:.1f} min",
+                hovertemplate='%{text}<br>Completion: %{y:.1f}%<extra></extra>'
+            ))
+    
+    fig.update_layout(
+        plot_bgcolor='#000',
+        paper_bgcolor='#000',
+        height=400,
+        margin=dict(l=20, r=20, t=120, b=20),
+        title={'text': 'Project Efficiency: Time vs. Completion Rate', 'x': 0.5, 'xanchor': 'center'},
+        xaxis=dict(title='Total Time Spent (minutes)', gridcolor='#333'),
+        yaxis=dict(title='Completion Rate (%)', gridcolor='#333'),
+        legend=dict(bgcolor='rgba(0,0,0,0.8)', bordercolor='#333')
+    )
+    
+    return fig
+
+
+def create_task_estimation_accuracy_plot(df_tasks):
+    """
+    Create a plot comparing estimated vs. actual time spent on tasks.
+    
+    Args:
+        df_tasks (pd.DataFrame): Normalized task data
+        
+    Returns:
+        go.Figure: Task estimation accuracy plot
+    """
+    # Filter tasks with both estimates and actual time
+    tasks_with_estimates = df_tasks[
+        (df_tasks['timeEstimate'].notna()) & 
+        (df_tasks['timeSpent'] > 0) &
+        (df_tasks['timeEstimate'] > 0)
+    ].copy()
+    
+    if len(tasks_with_estimates) == 0:
+        return create_placeholder_figure()
+    
+    # Calculate accuracy metrics
+    tasks_with_estimates['accuracy_ratio'] = tasks_with_estimates['timeSpent'] / tasks_with_estimates['timeEstimate']
+    tasks_with_estimates['accuracy_percent'] = (tasks_with_estimates['accuracy_ratio'] - 1) * 100
+    
+    # Create histogram of estimation accuracy
+    fig = go.Figure()
+    
+    fig.add_trace(go.Histogram(
+        x=tasks_with_estimates['accuracy_percent'],
+        nbinsx=20,
+        marker_color='#636efa',
+        opacity=0.8,
+        hovertemplate='Accuracy: %{x:.1f}%<br>Count: %{y}<extra></extra>'
+    ))
+    
+    # Add vertical line at 0% (perfect estimation)
+    fig.add_vline(x=0, line_dash="dash", line_color="#888", 
+                  annotation_text="Perfect Estimation", annotation_position="top right")
+    
+    # Add vertical lines at ±50% and ±100%
+    fig.add_vline(x=50, line_dash="dot", line_color="#666", line_width=1)
+    fig.add_vline(x=-50, line_dash="dot", line_color="#666", line_width=1)
+    fig.add_vline(x=100, line_dash="dot", line_color="#666", line_width=1)
+    fig.add_vline(x=-100, line_dash="dot", line_color="#666", line_width=1)
+    
+    fig.update_layout(
+        plot_bgcolor='#000',
+        paper_bgcolor='#000',
+        height=400,
+        margin=dict(l=20, r=20, t=120, b=20),
+        title={'text': 'Task Estimation Accuracy Distribution', 'x': 0.5, 'xanchor': 'center'},
+        xaxis=dict(
+            title='Estimation Accuracy (% over/under)',
+            gridcolor='#333',
+            range=[-150, 150]
+        ),
+        yaxis=dict(title='Number of Tasks', gridcolor='#333'),
+        showlegend=False
+    )
+    
+    return fig

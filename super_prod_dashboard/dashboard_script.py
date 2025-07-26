@@ -22,6 +22,11 @@ from r_spdash import (
     render_navigation,
     render_plots
 )
+from r_spdash.viz.plots import (
+    create_tag_time_trends_plot,
+    create_project_efficiency_plot,
+    create_task_estimation_accuracy_plot
+)
 
 # --- File Monitoring ---
 def monitor_file_changes():
@@ -93,11 +98,17 @@ def main():
     # Create actual plots instead of placeholders
     fig_tags = create_tags_pie_chart(df_tasks, data, color_sync)
     simple_counter_plots = create_simple_counter_plots(data)
+    
+    # Create new advanced analytics plots
+    fig_tag_trends = create_tag_time_trends_plot(df_tasks, data, color_sync)
+    fig_project_efficiency = create_project_efficiency_plot(df_tasks, df_projects, color_sync)
+    fig_estimation_accuracy = create_task_estimation_accuracy_plot(df_tasks)
 
     render_sidebar()
     plots_per_page = 2
     plot_keys = ['accumulated', 'fig3', 'fig4', 'fig1', 'fig2', 'tags_pie']
     plot_keys += list(simple_counter_plots.keys())
+    plot_keys += ['tag_trends', 'project_efficiency', 'estimation_accuracy']
     plot_objs = {
         'accumulated': cumulative_fig,
         'fig3': fig3,
@@ -105,7 +116,10 @@ def main():
         'fig1': fig1,
         'fig2': fig2,
         'tags_pie': fig_tags,  # Use actual tags pie chart
-        **simple_counter_plots  # Use actual simple counter plots
+        **simple_counter_plots,  # Use actual simple counter plots
+        'tag_trends': fig_tag_trends,
+        'project_efficiency': fig_project_efficiency,
+        'estimation_accuracy': fig_estimation_accuracy
     }
     num_plot_pages = math.ceil(len(plot_keys) / plots_per_page)
     num_pages = 1 + num_plot_pages
