@@ -9,10 +9,14 @@ import math
 import plotly.graph_objects as go
 import numpy as np
 from collections import defaultdict
+from data_loader import load_super_productivity_data
 
 # --- Load JSON data ---
-with open('super-productivity-backup.json', 'r', encoding='utf-8') as f:
-    data = json.load(f)['data']
+try:
+    data = load_super_productivity_data()['data']
+except Exception as e:
+    st.error(f"Error loading SuperProductivity data: {e}")
+    st.stop()
 
 # --- Normalize Tasks ---
 tasks = []
