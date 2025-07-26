@@ -124,9 +124,9 @@ calendar_options = {
     "headerToolbar": {
         "left": "prev,next today",
         "center": "title",
-        "right": "dayGridMonth,dayGridWeek,dayGridDay"
+        "right": "dayGridMonth,dayGridWeek"
     },
-    "height": 400,  # Reduced by 20% from 500 to 400
+    "height": 416,  # Increased by 4% from 400 to 416 to remove scrollbar
     "locale": "en",
     "eventDisplay": "block",
     "dayMaxEventRows": 2,
@@ -145,6 +145,38 @@ CUSTOM_CSS = """
     }
     .fc-event-main {
         background-color: #000 !important;
+    }
+    .fc-button-primary {
+        background-color: #1a1a2e !important;
+        border-color: #1a1a2e !important;
+        color: #fff !important;
+    }
+    .fc-button-primary:hover {
+        background-color: #16213e !important;
+        border-color: #16213e !important;
+    }
+    .fc-button-primary:active {
+        background-color: #0f3460 !important;
+        border-color: #0f3460 !important;
+    }
+    .fc-button-primary:focus {
+        background-color: #1a1a2e !important;
+        border-color: #1a1a2e !important;
+        box-shadow: 0 0 0 0.2rem rgba(26, 26, 46, 0.5) !important;
+    }
+    .fc-button-primary:disabled {
+        background-color: #2d2d44 !important;
+        border-color: #2d2d44 !important;
+        color: #888 !important;
+    }
+    .fc-button-primary.fc-button-active {
+        background-color: #4a4a8a !important;
+        border-color: #4a4a8a !important;
+        color: #fff !important;
+    }
+    .fc-button-primary.fc-button-active:hover {
+        background-color: #5a5a9a !important;
+        border-color: #5a5a9a !important;
     }
 """
 
