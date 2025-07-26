@@ -12,27 +12,34 @@ from collections import defaultdict
 from r_spdash.io.data_loader import load_super_productivity_data
 from r_spdash.viz.color_sync import create_color_sync
 import time
+import os
 
 # --- File Watcher for Live Reload ---
 from r_spdash.io.data_loader import SuperProductivityDataLoader
 
-WATCH_INTERVAL_SEC = 10
-if 'last_file_path' not in st.session_state or 'last_file_mtime' not in st.session_state:
+# Initialize session state for file monitoring
+if 'file_monitor_initialized' not in st.session_state:
+    st.session_state['file_monitor_initialized'] = True
     st.session_state['last_file_path'] = None
     st.session_state['last_file_mtime'] = None
     st.session_state['last_check'] = 0
 
-# Only check every WATCH_INTERVAL_SEC seconds
+# Check for file updates every 10 seconds
 now = time.time()
-if now - st.session_state['last_check'] > WATCH_INTERVAL_SEC:
+if now - st.session_state['last_check'] > 10:  # Check every 10 seconds
     loader = SuperProductivityDataLoader()
     info = loader.get_most_recent_file_info()
     st.session_state['last_check'] = now
+    
     if info:
-        if (st.session_state['last_file_path'] != info['path'] or
-            st.session_state['last_file_mtime'] != info['mtime']):
-            st.session_state['last_file_path'] = info['path']
-            st.session_state['last_file_mtime'] = info['mtime']
+        current_file_path = info['path']
+        current_file_mtime = info['mtime']
+        
+        # If file has changed, update session state and trigger rerun
+        if (st.session_state['last_file_path'] != current_file_path or
+            st.session_state['last_file_mtime'] != current_file_mtime):
+            st.session_state['last_file_path'] = current_file_path
+            st.session_state['last_file_mtime'] = current_file_mtime
             st.rerun()
 
 # --- Load JSON data ---
@@ -389,6 +396,18 @@ extra_plot_objs = {
 
 # --- Streamlit App ---
 st.set_page_config(page_title="Super Productivity Dashboard", layout="wide", initial_sidebar_state="expanded")
+
+# Add a refresh button in the sidebar
+with st.sidebar:
+    st.header("Dashboard Controls")
+    if st.button("🔄 Refresh Data", help="Manually refresh data from the latest JSON file"):
+        st.rerun()
+    
+    # Show current file info
+    if st.session_state.get('last_file_path'):
+        st.info(f"📁 Current file: {os.path.basename(st.session_state['last_file_path'])}")
+        if st.session_state.get('last_file_mtime'):
+            st.caption(f"Last modified: {datetime.fromtimestamp(st.session_state['last_file_mtime']).strftime('%Y-%m-%d %H:%M:%S')}")
 
 # --- Interactive Calendar (streamlit-calendar) ---
 calendar_options = {
