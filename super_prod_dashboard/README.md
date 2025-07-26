@@ -9,6 +9,7 @@ A comprehensive dashboard for visualizing SuperProductivity data with interactiv
 - **Health Metrics**: Track water intake, media consumption, and workout time
 - **Project Analysis**: Detailed breakdown of time spent across projects
 - **Tag Distribution**: Visualize how time is distributed across different tags
+- **Color & Icon Sync**: Automatic synchronization of project and tag colors/icons from SuperProductivity
 
 ## Data Loading
 
@@ -27,7 +28,7 @@ The system will:
 
 - `dashboard_script.py`: Main Streamlit dashboard application
 - `data_loader.py`: Modular data loading and validation logic
-- `test_dashboard.py`: Test script to verify data loading functionality
+- `color_sync.py`: Color and icon synchronization between SuperProductivity and dashboard
 - `requirements.txt`: Python dependencies
 
 ## Usage
@@ -42,9 +43,9 @@ The system will:
    streamlit run dashboard_script.py
    ```
 
-3. Test data loading:
+3. Test color synchronization:
    ```bash
-   python test_dashboard.py
+   python color_sync.py
    ```
 
 ## TODO
@@ -52,6 +53,6 @@ The system will:
 * [ ] a button to toggle limiting time data to the last 30 days in both pie charts
 * [ ] a way to make sure time is being tracked in sp
 * [ ] change to 1/4 etc.
-* [ ] synchronize colors for projects and tags between sp and the dashboard
+* [x] synchronize colors for projects and tags between sp and the dashboard
 * [ ] human readable time in daily media watching and workout graphs
 * [ ] maybe incorporate the icons and images themselves

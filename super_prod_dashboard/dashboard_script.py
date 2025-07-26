@@ -10,10 +10,13 @@ import plotly.graph_objects as go
 import numpy as np
 from collections import defaultdict
 from data_loader import load_super_productivity_data
+from color_sync import create_color_sync
 
 # --- Load JSON data ---
 try:
     data = load_super_productivity_data()['data']
+    # Initialize color and icon synchronization
+    color_sync = create_color_sync(data)
 except Exception as e:
     st.error(f"Error loading SuperProductivity data: {e}")
     st.stop()
@@ -113,8 +116,13 @@ time_per_project = df_projects[['title']].merge(
 )
 time_per_project['minutes'] = time_per_project['minutes'].fillna(0)
 time_per_project['hm_str'] = time_per_project['minutes'].apply(minutes_to_hm_str)
+
+# Add synchronized colors and display names with icons
+time_per_project['display_name'] = time_per_project['title'].apply(color_sync.get_project_display_name)
+time_per_project['color'] = time_per_project['title'].apply(color_sync.get_project_color)
+
 fig2 = go.Figure(data=[go.Pie(
-    labels=time_per_project['title'],
+    labels=time_per_project['display_name'],
     values=time_per_project['minutes'],
     hole=0,
     customdata=time_per_project['hm_str'],
@@ -122,6 +130,7 @@ fig2 = go.Figure(data=[go.Pie(
     textfont=dict(color='white'),
     textposition='outside',
     textinfo='label+percent',
+    marker=dict(colors=time_per_project['color'])
 )])
 fig2.update_layout(
     plot_bgcolor='#000',
@@ -136,9 +145,12 @@ fig3 = go.Figure()
 for project in df_all_time['project'].unique():
     proj_data = df_all_time[df_all_time['project'] == project].copy()
     proj_data['hm_str'] = proj_data['minutes'].apply(minutes_to_hm_str)
-    fig3.add_bar(x=proj_data['date'], y=proj_data['minutes'], name=project,
+    project_display_name = color_sync.get_project_display_name(project)
+    project_color = color_sync.get_project_color(project)
+    fig3.add_bar(x=proj_data['date'], y=proj_data['minutes'], name=project_display_name,
                  customdata=proj_data['hm_str'],
-                 hovertemplate='%{x}<br>%{customdata}<extra></extra>')
+                 hovertemplate='%{x}<br>%{customdata}<extra></extra>',
+                 marker_color=project_color)
 fig3.update_layout(
     barmode='stack',
     plot_bgcolor='#000',
@@ -167,9 +179,12 @@ fig4 = go.Figure()
 for project in all_projects:
     proj_data = df_avg_workday_proj[df_avg_workday_proj['project'] == project].copy()
     proj_data['hm_str'] = proj_data['minutes'].apply(minutes_to_hm_str)
-    fig4.add_bar(x=proj_data['weekday'], y=proj_data['minutes'], name=project,
+    project_display_name = color_sync.get_project_display_name(project)
+    project_color = color_sync.get_project_color(project)
+    fig4.add_bar(x=proj_data['weekday'], y=proj_data['minutes'], name=project_display_name,
                  customdata=proj_data['hm_str'],
-                 hovertemplate='%{x}<br>%{customdata}<extra></extra>')
+                 hovertemplate='%{x}<br>%{customdata}<extra></extra>',
+                 marker_color=project_color)
 fig4.update_layout(
     barmode='stack',
     plot_bgcolor='#000',
@@ -227,20 +242,25 @@ untagged_time = df_tags[~df_tags['has_tag']]['timeSpent'].sum()
 pie_labels = list(tag_time['tag']) if not tag_time.empty else []
 pie_values = list(tag_time['timeSpent']) if not tag_time.empty else []
 pie_hm_strs = [minutes_to_hm_str(m) for m in pie_values]
-if untagged_time > 0 or not pie_labels:
-    pie_labels.append('Untagged')
-    pie_values.append(untagged_time)
-    pie_hm_strs.append(minutes_to_hm_str(untagged_time))
 
-# Set colors: grey for untagged, default for others
+# Add synchronized colors and display names with icons
+pie_display_labels = []
 pie_colors = []
 for label in pie_labels:
     if label == 'Untagged':
+        pie_display_labels.append('Untagged')
         pie_colors.append('grey')
     else:
-        pie_colors.append(None)
+        pie_display_labels.append(color_sync.get_tag_display_name(label))
+        pie_colors.append(color_sync.get_tag_color(label))
 
-fig_tags = go.Figure(data=[go.Pie(labels=pie_labels, values=pie_values, marker=dict(colors=pie_colors), hole=0,
+if untagged_time > 0 or not pie_labels:
+    pie_display_labels.append('Untagged')
+    pie_values.append(untagged_time)
+    pie_hm_strs.append(minutes_to_hm_str(untagged_time))
+    pie_colors.append('grey')
+
+fig_tags = go.Figure(data=[go.Pie(labels=pie_display_labels, values=pie_values, marker=dict(colors=pie_colors), hole=0,
                                   customdata=pie_hm_strs,
                                   hovertemplate='%{label}: %{customdata}<extra></extra>',
                                   textfont=dict(color='white'),
