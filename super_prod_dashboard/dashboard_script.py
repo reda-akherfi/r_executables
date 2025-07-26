@@ -104,7 +104,7 @@ def main():
     fig_project_efficiency = create_project_efficiency_plot(df_tasks, df_projects, color_sync)
     fig_estimation_accuracy = create_task_estimation_accuracy_plot(df_tasks)
 
-    render_sidebar()
+    # Store plot information in session state for sidebar
     plots_per_page = 2
     plot_keys = ['accumulated', 'fig3', 'fig4', 'fig1', 'fig2', 'tags_pie']
     plot_keys += list(simple_counter_plots.keys())
@@ -121,6 +121,13 @@ def main():
         'project_efficiency': fig_project_efficiency,
         'estimation_accuracy': fig_estimation_accuracy
     }
+    
+    # Store plot information for sidebar
+    st.session_state['plot_keys'] = plot_keys
+    st.session_state['plots_per_page'] = plots_per_page
+    st.session_state['num_plot_pages'] = math.ceil(len(plot_keys) / plots_per_page)
+    
+    render_sidebar()
     num_plot_pages = math.ceil(len(plot_keys) / plots_per_page)
     num_pages = 1 + num_plot_pages
     if 'plot_page' not in st.session_state:

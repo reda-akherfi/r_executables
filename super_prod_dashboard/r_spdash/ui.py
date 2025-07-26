@@ -18,6 +18,130 @@ def render_sidebar():
             st.info(f"📁 Current file: {os.path.basename(st.session_state['last_file_path'])}")
             if st.session_state.get('last_file_mtime'):
                 st.caption(f"Last modified: {format_datetime(st.session_state['last_file_mtime'])}")
+        
+        # Plot search functionality
+        st.markdown("---")
+        st.subheader("🔍 Plot Search")
+        
+        # Get all available plots and their descriptions
+        plot_descriptions = {
+            'Calendar': 'Calendar view with work events',
+            'Accumulated Work Time': 'Cumulative work time across days',
+            'Time Spent Per Day Per Project': 'Stacked bar chart of daily project time',
+            'Average Time Per Workday': 'Average time by weekday and project',
+            'All Time Spent Per Day': 'Daily total work time',
+            'Time Spent Per Project': 'Pie chart of project time distribution',
+            'Time Spent Distribution by Tag': 'Pie chart of tag time distribution',
+            'Daily Water Intake': 'Water consumption tracking',
+            'Daily Media Watching': 'Media consumption tracking',
+            'Daily Workout Time': 'Workout time tracking',
+            'Tag Usage Trends Over Time': 'How tag usage changes over time',
+            'Project Efficiency': 'Time vs. completion rate per project',
+            'Task Estimation Accuracy': 'Estimated vs. actual time distribution'
+        }
+        
+        # Create search input
+        search_term = st.text_input("Search plots...", placeholder="Type to search...", key="plot_search")
+        
+        # Filter plots based on search
+        if search_term:
+            filtered_plots = {
+                name: desc for name, desc in plot_descriptions.items() 
+                if search_term.lower() in name.lower() or search_term.lower() in desc.lower()
+            }
+        else:
+            filtered_plots = plot_descriptions
+        
+        # Display filtered plots as clickable buttons
+        if filtered_plots:
+            st.markdown("**Available Plots:**")
+            for plot_name, description in filtered_plots.items():
+                if st.button(f"📊 {plot_name}", key=f"search_{plot_name}", help=description):
+                    # Navigate to the appropriate page
+                    navigate_to_plot(plot_name)
+        else:
+            st.info("No plots match your search.")
+        
+        # Show current page info
+        if 'plot_page' in st.session_state:
+            current_page = st.session_state['plot_page']
+            st.markdown("---")
+            st.markdown(f"**Current Page:** {current_page + 1}")
+            if current_page == 0:
+                st.markdown("📍 **Calendar View**")
+            else:
+                # Show which plots are on current page
+                if 'plot_keys' in st.session_state and 'plots_per_page' in st.session_state:
+                    plot_keys = st.session_state['plot_keys']
+                    plots_per_page = st.session_state['plots_per_page']
+                    plot_page_idx = current_page - 1
+                    start_idx = plot_page_idx * plots_per_page
+                    end_idx = start_idx + plots_per_page
+                    plots_on_page = plot_keys[start_idx:end_idx]
+                    
+                    st.markdown("📍 **Plots on this page:**")
+                    for plot_key in plots_on_page:
+                        plot_name = get_plot_display_name(plot_key)
+                        st.markdown(f"• {plot_name}")
+
+
+def get_plot_display_name(plot_key):
+    """
+    Convert plot key to display name.
+    
+    Args:
+        plot_key (str): Plot key from plot_keys list
+        
+    Returns:
+        str: Human-readable plot name
+    """
+    plot_name_mapping = {
+        'accumulated': 'Accumulated Work Time',
+        'fig1': 'All Time Spent Per Day',
+        'fig2': 'Time Spent Per Project',
+        'fig3': 'Time Spent Per Day Per Project',
+        'fig4': 'Average Time Per Workday',
+        'tags_pie': 'Time Spent Distribution by Tag',
+        'water': 'Daily Water Intake',
+        'media': 'Daily Media Watching',
+        'workout': 'Daily Workout Time',
+        'tag_trends': 'Tag Usage Trends Over Time',
+        'project_efficiency': 'Project Efficiency',
+        'estimation_accuracy': 'Task Estimation Accuracy'
+    }
+    return plot_name_mapping.get(plot_key, plot_key)
+
+
+def navigate_to_plot(plot_name):
+    """
+    Navigate to the page containing the specified plot.
+    
+    Args:
+        plot_name (str): Name of the plot to navigate to
+    """
+    # Map plot names to their page numbers
+    plot_page_mapping = {
+        'Calendar': 0,
+        'Accumulated Work Time': 1,
+        'Time Spent Per Day Per Project': 1,
+        'Average Time Per Workday': 2,
+        'All Time Spent Per Day': 2,
+        'Time Spent Per Project': 3,
+        'Time Spent Distribution by Tag': 3,
+        'Daily Water Intake': 4,
+        'Daily Media Watching': 4,
+        'Daily Workout Time': 5,
+        'Tag Usage Trends Over Time': 5,
+        'Project Efficiency': 6,
+        'Task Estimation Accuracy': 6
+    }
+    
+    if plot_name in plot_page_mapping:
+        target_page = plot_page_mapping[plot_name]
+        st.session_state['plot_page'] = target_page
+        st.rerun()
+    else:
+        st.error(f"Plot '{plot_name}' not found.")
 
 
 def render_calendar(calendar_events, calendar_options, custom_css):
