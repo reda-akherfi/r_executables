@@ -126,7 +126,7 @@ calendar_options = {
         "center": "title",
         "right": "dayGridMonth,dayGridWeek,dayGridDay"
     },
-    "height": 500,
+    "height": 400,  # Reduced by 20% from 500 to 400
     "locale": "en",
     "eventDisplay": "block",
     "dayMaxEventRows": 2,
@@ -138,6 +138,13 @@ calendar_options = {
 CUSTOM_CSS = """
     .fc-daygrid-day-number {
         color: #fff;
+    }
+    .fc-event {
+        background-color: #000 !important;
+        border-color: #000 !important;
+    }
+    .fc-event-main {
+        background-color: #000 !important;
     }
 """
 
