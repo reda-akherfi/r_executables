@@ -162,7 +162,8 @@ def create_figures(df_all_time, df_projects, color_sync):
 
 def create_tags_pie_chart(df_tasks, data, color_sync):
     """
-    Create pie chart for tag distribution, including all tags (even those with zero minutes).
+    Create pie chart for tag distribution, including all tags (even those with zero minutes),
+    but excluding tags in the exclusion list.
     
     Args:
         df_tasks (pd.DataFrame): Normalized task data
@@ -172,6 +173,9 @@ def create_tags_pie_chart(df_tasks, data, color_sync):
     Returns:
         go.Figure: Tags pie chart
     """
+    # Exclusion list for tags
+    EXCLUDED_TAGS = {"Today"}
+
     # Calculate total time spent per tag, and for untagged work
     df_tags = df_tasks[df_tasks['timeSpent'] > 0].copy()  # Only tasks with time spent
     if 'tagIds' not in df_tags.columns:
@@ -196,7 +200,7 @@ def create_tags_pie_chart(df_tasks, data, color_sync):
         tag_time['tag'] = tag_time['tagIds']
     
     # --- Ensure all tags are present, even if zero ---
-    all_tags = tag_map.values() if tag_map else []
+    all_tags = [t for t in tag_map.values() if t not in EXCLUDED_TAGS] if tag_map else []
     tag_time_dict = dict(zip(tag_time['tag'], tag_time['timeSpent']))
     pie_labels = list(all_tags)
     pie_values = [tag_time_dict.get(label, 0) for label in pie_labels]
