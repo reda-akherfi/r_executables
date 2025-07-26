@@ -9,8 +9,8 @@ import math
 import plotly.graph_objects as go
 import numpy as np
 from collections import defaultdict
-from data_loader import load_super_productivity_data
-from color_sync import create_color_sync
+from r_spdash.io.data_loader import load_super_productivity_data
+from r_spdash.viz.color_sync import create_color_sync
 
 # --- Load JSON data ---
 try:
