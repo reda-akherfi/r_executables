@@ -82,7 +82,7 @@ def main():
     """
     st.set_page_config(page_title="Super Productivity Dashboard",
      layout="wide",
-      initial_sidebar_state="expanded")
+      initial_sidebar_state="collapsed")
     monitor_file_changes()
     data, color_sync = load_data()
     df_tasks = normalize_tasks(data)
